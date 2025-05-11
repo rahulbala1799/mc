@@ -1,7 +1,9 @@
 import os
 import pandas as pd
+import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-12345')
@@ -14,6 +16,56 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def process_ticket_data(df):
+    """Process ticket data for analysis"""
+    # Convert date columns to datetime
+    df['Logged - Date'] = pd.to_datetime(df['Logged - Date'], errors='coerce')
+    df['Ticket solved - Date'] = pd.to_datetime(df['Ticket solved - Date'], errors='coerce')
+    
+    # Calculate resolution time in days
+    df['Resolution Time (Days)'] = (df['Ticket solved - Date'] - df['Logged - Date']).dt.total_seconds() / (24 * 60 * 60)
+    
+    # Fill NaN regions with 'Unknown'
+    df['Region'] = df['Region'].fillna('Unknown')
+    
+    return df
+
+def calculate_resolution_metrics(df):
+    """Calculate various resolution time metrics"""
+    metrics = {}
+    
+    # Overall metrics
+    all_tickets_mean = df['Resolution Time (Days)'].mean()
+    solved_tickets = df[df['Ticket status'] == 'Solved']
+    solved_tickets_mean = solved_tickets['Resolution Time (Days)'].mean()
+    
+    metrics['all_tickets_avg'] = round(all_tickets_mean, 1) if not pd.isna(all_tickets_mean) else "N/A"
+    metrics['solved_tickets_avg'] = round(solved_tickets_mean, 1) if not pd.isna(solved_tickets_mean) else "N/A"
+    
+    # By region
+    region_metrics = solved_tickets.groupby('Region')['Resolution Time (Days)'].mean().sort_values()
+    metrics['by_region'] = region_metrics.round(1).to_dict()
+    
+    # By group
+    group_metrics = solved_tickets.groupby('Level 3 Group')['Resolution Time (Days)'].mean().sort_values()
+    metrics['by_group'] = group_metrics.round(1).to_dict()
+    
+    # By engineer
+    engineer_metrics = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].mean().sort_values()
+    metrics['by_engineer'] = engineer_metrics.round(1).to_dict()
+    
+    # By priority
+    priority_metrics = solved_tickets.groupby('Priority')['Resolution Time (Days)'].mean().sort_values()
+    metrics['by_priority'] = priority_metrics.round(1).to_dict()
+    
+    # Tickets count
+    metrics['total_tickets'] = len(df)
+    metrics['solved_tickets'] = len(solved_tickets)
+    metrics['open_tickets'] = len(df[df['Ticket status'] == 'Open'])
+    metrics['hold_tickets'] = len(df[df['Ticket status'] == 'Hold'])
+    
+    return metrics
 
 @app.route('/')
 def index():
@@ -39,6 +91,20 @@ def upload_file():
         session['filepath'] = filepath
         session['filename'] = filename
         
+        # Try to detect if it's ticket data
+        try:
+            df = pd.read_excel(filepath)
+            expected_columns = ['Ticket ID', 'Logged - Date', 'Ticket status', 'Region', 
+                               'Assignee name', 'Level 3 Group', 'Ticket solved - Date', 'Priority']
+            
+            # Check if this is ticket data
+            if all(col in df.columns for col in expected_columns):
+                session['is_ticket_data'] = True
+            else:
+                session['is_ticket_data'] = False
+        except:
+            session['is_ticket_data'] = False
+        
         return redirect(url_for('analyze'))
     
     flash('Invalid file type. Please upload an Excel file (.xlsx or .xls)')
@@ -48,6 +114,7 @@ def upload_file():
 def analyze():
     filepath = session.get('filepath')
     filename = session.get('filename')
+    is_ticket_data = session.get('is_ticket_data', False)
     
     if not filepath or not os.path.exists(filepath):
         flash('Please upload a file first')
@@ -57,6 +124,11 @@ def analyze():
         # Load Excel file with pandas
         df = pd.read_excel(filepath)
         
+        # If it's ticket data, redirect to the ticket analysis page
+        if is_ticket_data:
+            return redirect(url_for('ticket_overview'))
+        
+        # Otherwise show general analysis
         # Basic analysis
         row_count = len(df)
         column_count = len(df.columns)
@@ -89,6 +161,296 @@ def analyze():
     except Exception as e:
         flash(f'Error analyzing file: {str(e)}')
         return redirect(url_for('index'))
+
+@app.route('/ticket_overview')
+def ticket_overview():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Calculate metrics
+        metrics = calculate_resolution_metrics(df)
+        
+        # Generate preview table
+        preview_html = df.head(10).to_html(classes='table table-striped table-hover', index=False)
+        
+        # Store the dataframe in a session variable for other routes
+        session['ticket_data_processed'] = True
+        
+        return render_template(
+            'ticket_overview.html',
+            filename=filename,
+            metrics=metrics,
+            preview_html=preview_html
+        )
+        
+    except Exception as e:
+        flash(f'Error analyzing ticket data: {str(e)}')
+        return redirect(url_for('index'))
+
+@app.route('/region_analysis')
+def region_analysis():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    if not session.get('ticket_data_processed'):
+        return redirect(url_for('ticket_overview'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Regional analysis
+        solved_tickets = df[df['Ticket status'] == 'Solved']
+        
+        # Average resolution time by region
+        region_avg = solved_tickets.groupby('Region')['Resolution Time (Days)'].mean().sort_values()
+        region_avg_html = region_avg.round(1).reset_index().to_html(
+            classes='table table-striped table-hover', 
+            index=False,
+            columns=['Region', 'Resolution Time (Days)'],
+            header=['Region', 'Avg. Resolution Time (Days)']
+        )
+        
+        # Ticket count by region
+        region_count = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0)
+        if 'Solved' not in region_count.columns:
+            region_count['Solved'] = 0
+        if 'Open' not in region_count.columns:
+            region_count['Open'] = 0
+        if 'Hold' not in region_count.columns:
+            region_count['Hold'] = 0
+            
+        region_count['Total'] = region_count.sum(axis=1)
+        region_count_html = region_count.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Region priority distribution
+        region_priority = df.groupby(['Region', 'Priority']).size().unstack(fill_value=0)
+        region_priority_html = region_priority.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        return render_template(
+            'region_analysis.html',
+            filename=filename,
+            region_avg_html=region_avg_html,
+            region_count_html=region_count_html,
+            region_priority_html=region_priority_html,
+            regions=sorted(df['Region'].unique())
+        )
+        
+    except Exception as e:
+        flash(f'Error in region analysis: {str(e)}')
+        return redirect(url_for('ticket_overview'))
+
+@app.route('/group_analysis')
+def group_analysis():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    if not session.get('ticket_data_processed'):
+        return redirect(url_for('ticket_overview'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Group analysis
+        solved_tickets = df[df['Ticket status'] == 'Solved']
+        
+        # Average resolution time by group
+        group_avg = solved_tickets.groupby('Level 3 Group')['Resolution Time (Days)'].mean().sort_values()
+        group_avg_html = group_avg.round(1).reset_index().to_html(
+            classes='table table-striped table-hover', 
+            index=False,
+            columns=['Level 3 Group', 'Resolution Time (Days)'],
+            header=['Group', 'Avg. Resolution Time (Days)']
+        )
+        
+        # Ticket count by group
+        group_count = df.groupby(['Level 3 Group', 'Ticket status']).size().unstack(fill_value=0)
+        if 'Solved' not in group_count.columns:
+            group_count['Solved'] = 0
+        if 'Open' not in group_count.columns:
+            group_count['Open'] = 0
+        if 'Hold' not in group_count.columns:
+            group_count['Hold'] = 0
+            
+        group_count['Total'] = group_count.sum(axis=1)
+        group_count_html = group_count.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Group priority distribution
+        group_priority = df.groupby(['Level 3 Group', 'Priority']).size().unstack(fill_value=0)
+        group_priority_html = group_priority.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        return render_template(
+            'group_analysis.html',
+            filename=filename,
+            group_avg_html=group_avg_html,
+            group_count_html=group_count_html,
+            group_priority_html=group_priority_html,
+            groups=sorted(df['Level 3 Group'].unique())
+        )
+        
+    except Exception as e:
+        flash(f'Error in group analysis: {str(e)}')
+        return redirect(url_for('ticket_overview'))
+
+@app.route('/engineer_analysis')
+def engineer_analysis():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    if not session.get('ticket_data_processed'):
+        return redirect(url_for('ticket_overview'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Engineer analysis
+        solved_tickets = df[df['Ticket status'] == 'Solved']
+        
+        # Average resolution time by engineer
+        engineer_avg = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].mean().sort_values()
+        engineer_avg_html = engineer_avg.round(1).reset_index().to_html(
+            classes='table table-striped table-hover', 
+            index=False,
+            columns=['Assignee name', 'Resolution Time (Days)'],
+            header=['Engineer', 'Avg. Resolution Time (Days)']
+        )
+        
+        # Ticket count by engineer
+        engineer_count = df.groupby(['Assignee name', 'Ticket status']).size().unstack(fill_value=0)
+        if 'Solved' not in engineer_count.columns:
+            engineer_count['Solved'] = 0
+        if 'Open' not in engineer_count.columns:
+            engineer_count['Open'] = 0
+        if 'Hold' not in engineer_count.columns:
+            engineer_count['Hold'] = 0
+            
+        engineer_count['Total'] = engineer_count.sum(axis=1)
+        engineer_count_html = engineer_count.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Engineer distribution by region
+        engineer_region = df.groupby(['Assignee name', 'Region']).size().unstack(fill_value=0)
+        engineer_region_html = engineer_region.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        return render_template(
+            'engineer_analysis.html',
+            filename=filename,
+            engineer_avg_html=engineer_avg_html,
+            engineer_count_html=engineer_count_html,
+            engineer_region_html=engineer_region_html,
+            engineers=sorted(df['Assignee name'].unique())
+        )
+        
+    except Exception as e:
+        flash(f'Error in engineer analysis: {str(e)}')
+        return redirect(url_for('ticket_overview'))
+
+@app.route('/priority_analysis')
+def priority_analysis():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    if not session.get('ticket_data_processed'):
+        return redirect(url_for('ticket_overview'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Priority analysis
+        solved_tickets = df[df['Ticket status'] == 'Solved']
+        
+        # Average resolution time by priority
+        priority_avg = solved_tickets.groupby('Priority')['Resolution Time (Days)'].mean().sort_values()
+        priority_avg_html = priority_avg.round(1).reset_index().to_html(
+            classes='table table-striped table-hover', 
+            index=False,
+            columns=['Priority', 'Resolution Time (Days)'],
+            header=['Priority', 'Avg. Resolution Time (Days)']
+        )
+        
+        # Ticket count by priority
+        priority_count = df.groupby(['Priority', 'Ticket status']).size().unstack(fill_value=0)
+        if 'Solved' not in priority_count.columns:
+            priority_count['Solved'] = 0
+        if 'Open' not in priority_count.columns:
+            priority_count['Open'] = 0
+        if 'Hold' not in priority_count.columns:
+            priority_count['Hold'] = 0
+            
+        priority_count['Total'] = priority_count.sum(axis=1)
+        priority_count_html = priority_count.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Priority distribution by region
+        priority_region = df.groupby(['Priority', 'Region']).size().unstack(fill_value=0)
+        priority_region_html = priority_region.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        return render_template(
+            'priority_analysis.html',
+            filename=filename,
+            priority_avg_html=priority_avg_html,
+            priority_count_html=priority_count_html,
+            priority_region_html=priority_region_html,
+            priorities=sorted(df['Priority'].unique())
+        )
+        
+    except Exception as e:
+        flash(f'Error in priority analysis: {str(e)}')
+        return redirect(url_for('ticket_overview'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
