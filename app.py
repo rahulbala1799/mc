@@ -177,7 +177,148 @@ def ticket_overview():
         df = process_ticket_data(df)
         
         # Calculate metrics
-        metrics = calculate_resolution_metrics(df)
+        all_tickets_mean = df['Resolution Time (Days)'].mean()
+        solved_tickets = df[df['Ticket status'] == 'Solved']
+        solved_tickets_mean = solved_tickets['Resolution Time (Days)'].mean()
+        
+        # Calculate percentage of tickets solved within SLA (7 days as example)
+        within_sla = solved_tickets[solved_tickets['Resolution Time (Days)'] <= 7]
+        within_sla_percentage = round((len(within_sla) / len(solved_tickets)) * 100) if len(solved_tickets) > 0 else 0
+        
+        # Calculate percentages for ticket status
+        total_tickets = len(df)
+        solved_count = len(solved_tickets)
+        open_count = len(df[df['Ticket status'] == 'Open'])
+        hold_count = len(df[df['Ticket status'] == 'Hold'])
+        
+        solved_percentage = round((solved_count / total_tickets) * 100) if total_tickets > 0 else 0
+        open_percentage = round((open_count / total_tickets) * 100) if total_tickets > 0 else 0
+        hold_percentage = round((hold_count / total_tickets) * 100) if total_tickets > 0 else 0
+        
+        # By region
+        region_metrics = solved_tickets.groupby('Region')['Resolution Time (Days)'].mean().sort_values()
+        
+        # By group
+        group_metrics = solved_tickets.groupby('Level 3 Group')['Resolution Time (Days)'].mean().sort_values()
+        
+        # By engineer
+        engineer_metrics = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].mean().sort_values()
+        
+        # By priority
+        priority_metrics = solved_tickets.groupby('Priority')['Resolution Time (Days)'].mean().sort_values()
+
+        # --- Prepare data for Dashboard Charts ---
+        
+        # Open vs Solved by Month
+        df['Month'] = df['Logged - Date'].dt.strftime('%Y-%m')
+        monthly_status = df.groupby(['Month', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+        if 'Solved' not in monthly_status.columns:
+            monthly_status['Solved'] = 0
+        if 'Open' not in monthly_status.columns:
+            monthly_status['Open'] = 0
+        if 'Hold' not in monthly_status.columns:
+            monthly_status['Hold'] = 0
+            
+        monthly_data = {
+            'labels': monthly_status['Month'].tolist(),
+            'solved': monthly_status['Solved'].tolist(),
+            'open': monthly_status['Open'].tolist(),
+            'hold': monthly_status['Hold'].tolist()
+        }
+        
+        # Open vs Solved by Region
+        region_status = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+        # Ensure all statuses are present
+        if 'Solved' not in region_status.columns:
+            region_status['Solved'] = 0
+        if 'Open' not in region_status.columns:
+            region_status['Open'] = 0
+        if 'Hold' not in region_status.columns:
+            region_status['Hold'] = 0
+            
+        region_data = {
+            'labels': region_status['Region'].tolist(),
+            'solved': region_status['Solved'].tolist(),
+            'open': region_status['Open'].tolist(),
+            'hold': region_status['Hold'].tolist()
+        }
+        
+        # Open vs Solved by Engineer (top 10 by total tickets)
+        engineer_counts = df.groupby('Assignee name').size().sort_values(ascending=False)
+        top_engineers = engineer_counts.head(10).index.tolist()
+        
+        engineer_status = df[df['Assignee name'].isin(top_engineers)].groupby(['Assignee name', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+        # Ensure all statuses are present
+        if 'Solved' not in engineer_status.columns:
+            engineer_status['Solved'] = 0
+        if 'Open' not in engineer_status.columns:
+            engineer_status['Open'] = 0
+        if 'Hold' not in engineer_status.columns:
+            engineer_status['Hold'] = 0
+            
+        engineer_data = {
+            'labels': engineer_status['Assignee name'].tolist(),
+            'solved': engineer_status['Solved'].tolist(),
+            'open': engineer_status['Open'].tolist(),
+            'hold': engineer_status['Hold'].tolist()
+        }
+        
+        # Open vs Solved by Priority
+        priority_status = df.groupby(['Priority', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+        # Ensure all statuses are present
+        if 'Solved' not in priority_status.columns:
+            priority_status['Solved'] = 0
+        if 'Open' not in priority_status.columns:
+            priority_status['Open'] = 0
+        if 'Hold' not in priority_status.columns:
+            priority_status['Hold'] = 0
+            
+        priority_data = {
+            'labels': priority_status['Priority'].tolist(),
+            'solved': priority_status['Solved'].tolist(),
+            'open': priority_status['Open'].tolist(),
+            'hold': priority_status['Hold'].tolist()
+        }
+        
+        # Open vs Solved by Region and Group
+        # Get top 5 most common groups for readability
+        top_groups = df['Level 3 Group'].value_counts().head(5).index.tolist()
+        
+        # Filter data to include only top groups
+        filtered_df = df[df['Level 3 Group'].isin(top_groups)]
+        
+        # Create region-group combinations for x-axis labels
+        region_group_combinations = filtered_df.groupby(['Region', 'Level 3 Group']).size().reset_index()
+        region_group_labels = [f"{row['Region']} - {row['Level 3 Group']}" for _, row in region_group_combinations.iterrows()]
+        
+        # Create datasets for each status
+        region_group_datasets = []
+        for status in ['Solved', 'Open', 'Hold']:
+            status_data = []
+            for _, row in region_group_combinations.iterrows():
+                count = len(filtered_df[(filtered_df['Region'] == row['Region']) & 
+                                       (filtered_df['Level 3 Group'] == row['Level 3 Group']) & 
+                                       (filtered_df['Ticket status'] == status)])
+                status_data.append(count)
+            
+            # Different color for each status
+            if status == 'Solved':
+                color = 'rgba(25, 135, 84, 0.7)'
+            elif status == 'Open':
+                color = 'rgba(255, 193, 7, 0.7)'
+            else:  # Hold
+                color = 'rgba(220, 53, 69, 0.7)'
+                
+            region_group_datasets.append({
+                'label': status,
+                'data': status_data,
+                'backgroundColor': color
+            })
+        
+        region_group_data = {
+            'labels': region_group_labels,
+            'datasets': region_group_datasets
+        }
         
         # Generate preview table
         preview_html = df.head(10).to_html(classes='table table-striped table-hover', index=False)
@@ -185,11 +326,33 @@ def ticket_overview():
         # Store the dataframe in a session variable for other routes
         session['ticket_data_processed'] = True
         
+        metrics = {
+            'all_tickets_avg': round(all_tickets_mean, 1) if not pd.isna(all_tickets_mean) else "N/A",
+            'solved_tickets_avg': round(solved_tickets_mean, 1) if not pd.isna(solved_tickets_mean) else "N/A",
+            'by_region': region_metrics.round(1).to_dict(),
+            'by_group': group_metrics.round(1).to_dict(),
+            'by_engineer': engineer_metrics.round(1).to_dict(),
+            'by_priority': priority_metrics.round(1).to_dict(),
+            'total_tickets': total_tickets,
+            'solved_tickets': solved_count,
+            'open_tickets': open_count,
+            'hold_tickets': hold_count,
+            'solved_percentage': solved_percentage,
+            'open_percentage': open_percentage,
+            'hold_percentage': hold_percentage,
+            'within_sla_percentage': within_sla_percentage
+        }
+        
         return render_template(
             'ticket_overview.html',
             filename=filename,
             metrics=metrics,
-            preview_html=preview_html
+            preview_html=preview_html,
+            monthly_data=monthly_data,
+            region_data=region_data,
+            engineer_data=engineer_data,
+            priority_data=priority_data,
+            region_group_data=region_group_data
         )
         
     except Exception as e:
