@@ -213,10 +213,130 @@ def region_analysis():
         df = pd.read_excel(filepath)
         df = process_ticket_data(df)
         
-        # Regional analysis
+        # Get sorted list of regions
+        regions = sorted(df['Region'].unique())
+        
+        # Regional analysis - prepare comprehensive metrics
         solved_tickets = df[df['Ticket status'] == 'Solved']
         
-        # Average resolution time by region
+        # Region metrics dictionary to store all metrics
+        region_metrics = {}
+        
+        # Prepare summary data for rankings
+        regions_by_speed = []
+        regions_by_volume = []
+        regions_by_slowest = []
+        
+        # Set thresholds for highlighting
+        fast_regions = set()
+        slow_regions = set()
+        high_volume_regions = set()
+        
+        # Process each region
+        for region in regions:
+            # Get region data
+            region_data = df[df['Region'] == region]
+            region_solved = solved_tickets[solved_tickets['Region'] == region]
+            
+            # Basic counts
+            total_tickets = len(region_data)
+            solved_count = len(region_data[region_data['Ticket status'] == 'Solved'])
+            open_count = len(region_data[region_data['Ticket status'] == 'Open'])
+            hold_count = len(region_data[region_data['Ticket status'] == 'Hold'])
+            
+            # Average resolution time
+            avg_resolution = region_solved['Resolution Time (Days)'].mean()
+            avg_resolution_rounded = round(avg_resolution, 1) if not pd.isna(avg_resolution) else "N/A"
+            
+            # Add to sorting lists
+            if not pd.isna(avg_resolution):
+                regions_by_speed.append((region, avg_resolution_rounded))
+                regions_by_slowest.append((region, avg_resolution_rounded))
+                
+                # Mark as fast or slow based on avg resolution time
+                if avg_resolution < 3:  # Example threshold for "fast"
+                    fast_regions.add(region)
+                elif avg_resolution > 7:  # Example threshold for "slow"
+                    slow_regions.add(region)
+            
+            regions_by_volume.append((region, total_tickets))
+            
+            # Mark as high volume
+            if total_tickets > 100:  # Example threshold for "high volume"
+                high_volume_regions.add(region)
+            
+            # Priority distribution
+            priority_counts = region_data['Priority'].value_counts().to_dict()
+            # Calculate percentages
+            priority_percentages = {}
+            for priority, count in priority_counts.items():
+                priority_percentages[priority] = round((count / total_tickets) * 100)
+            
+            # Prepare chart data
+            priority_chart_data = {
+                'labels': list(priority_counts.keys()),
+                'counts': list(priority_counts.values())
+            }
+            
+            # Group distribution
+            group_counts = region_data['Level 3 Group'].value_counts().to_dict()
+            # Calculate percentages
+            group_percentages = {}
+            for group, count in group_counts.items():
+                group_percentages[group] = round((count / total_tickets) * 100)
+            
+            # Engineer data
+            engineer_data = {}
+            for engineer in region_data['Assignee name'].unique():
+                engineer_tickets = region_solved[region_solved['Assignee name'] == engineer]
+                count = len(engineer_tickets)
+                if count > 0:
+                    avg_time = round(engineer_tickets['Resolution Time (Days)'].mean(), 1)
+                    # Determine color based on resolution time
+                    if avg_time < 3:
+                        color = "success"
+                        percentage = min(avg_time / 10 * 100, 100)  # Scale for visual representation
+                    elif avg_time < 5:
+                        color = "info"
+                        percentage = min(avg_time / 10 * 100, 100)
+                    elif avg_time < 7:
+                        color = "warning"
+                        percentage = min(avg_time / 10 * 100, 100)
+                    else:
+                        color = "danger"
+                        percentage = 100
+                    
+                    engineer_data[engineer] = {
+                        'count': count,
+                        'avg_time': avg_time,
+                        'color': color,
+                        'percentage': percentage
+                    }
+            
+            # Sort engineer data by count in descending order
+            engineer_data = dict(sorted(engineer_data.items(), key=lambda x: x[1]['count'], reverse=True)[:10])
+            
+            # Store all metrics for this region
+            region_metrics[region] = {
+                'total_tickets': total_tickets,
+                'solved_tickets': solved_count,
+                'open_tickets': open_count,
+                'hold_tickets': hold_count,
+                'avg_resolution': avg_resolution_rounded,
+                'priority_distribution': priority_counts,
+                'priority_percentages': priority_percentages,
+                'priority_chart_data': priority_chart_data,
+                'group_distribution': group_counts,
+                'group_percentages': group_percentages,
+                'engineer_data': engineer_data
+            }
+        
+        # Sort the lists for rankings
+        regions_by_speed.sort(key=lambda x: x[1] if isinstance(x[1], (int, float)) else float('inf'))
+        regions_by_slowest.sort(key=lambda x: x[1] if isinstance(x[1], (int, float)) else float('-inf'), reverse=True)
+        regions_by_volume.sort(key=lambda x: x[1], reverse=True)
+        
+        # Average resolution time by region (for the overview table)
         region_avg = solved_tickets.groupby('Region')['Resolution Time (Days)'].mean().sort_values()
         region_avg_html = region_avg.round(1).reset_index().to_html(
             classes='table table-striped table-hover', 
@@ -225,7 +345,7 @@ def region_analysis():
             header=['Region', 'Avg. Resolution Time (Days)']
         )
         
-        # Ticket count by region
+        # Ticket count by region (for reference - not displayed in new design)
         region_count = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0)
         if 'Solved' not in region_count.columns:
             region_count['Solved'] = 0
@@ -240,7 +360,7 @@ def region_analysis():
             index=False
         )
         
-        # Region priority distribution
+        # Region priority distribution (for reference - not displayed in new design)
         region_priority = df.groupby(['Region', 'Priority']).size().unstack(fill_value=0)
         region_priority_html = region_priority.reset_index().to_html(
             classes='table table-striped table-hover',
@@ -253,7 +373,14 @@ def region_analysis():
             region_avg_html=region_avg_html,
             region_count_html=region_count_html,
             region_priority_html=region_priority_html,
-            regions=sorted(df['Region'].unique())
+            regions=regions,
+            region_metrics=region_metrics,
+            regions_by_speed=regions_by_speed,
+            regions_by_slowest=regions_by_slowest,
+            regions_by_volume=regions_by_volume,
+            fast_regions=fast_regions,
+            slow_regions=slow_regions,
+            high_volume_regions=high_volume_regions
         )
         
     except Exception as e:
