@@ -189,7 +189,8 @@ def ticket_overview():
         
         # Calculate percentages for ticket status
         total_tickets = len(df)
-        solved_count = len(solved_tickets)
+        # solved_count = len(solved_tickets)
+        solved_count = len(df[df['Ticket status'] == 'Solved'])
         open_count = len(df[df['Ticket status'] == 'Open'])
         hold_count = len(df[df['Ticket status'] == 'Hold'])
         
