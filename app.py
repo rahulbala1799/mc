@@ -1,9 +1,11 @@
 import os
 import pandas as pd
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import io
+import tempfile
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-12345')
@@ -973,6 +975,301 @@ def priority_analysis():
     except Exception as e:
         flash(f'Error in priority analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
+
+# New routes for Excel downloads
+@app.route('/download_overview_excel')
+def download_overview_excel():
+    filepath = session.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load the original data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Create a BytesIO object to store the Excel file
+        output = io.BytesIO()
+        
+        # Create ExcelWriter object with xlsxwriter engine
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Write the original data to a sheet
+            df.to_excel(writer, sheet_name='Raw Data', index=False)
+            
+            # Create summaries for other sheets
+            
+            # Ticket Status Summary
+            status_summary = df.groupby('Ticket status').size().reset_index(name='Count')
+            status_summary.to_excel(writer, sheet_name='Status Summary', index=False)
+            
+            # Region Summary
+            region_summary = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            region_summary.to_excel(writer, sheet_name='Region Summary', index=False)
+            
+            # Engineer Summary
+            engineer_summary = df.groupby(['Assignee name', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            engineer_summary.to_excel(writer, sheet_name='Engineer Summary', index=False)
+            
+            # Priority Summary
+            priority_summary = df.groupby(['Priority', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            priority_summary.to_excel(writer, sheet_name='Priority Summary', index=False)
+            
+            # Resolution Time Summary for solved tickets
+            solved_tickets = df[df['Ticket status'] == 'Solved']
+            if not solved_tickets.empty:
+                resolution_by_region = solved_tickets.groupby('Region')['Resolution Time (Days)'].agg(['mean', 'min', 'max']).reset_index()
+                resolution_by_region.to_excel(writer, sheet_name='Resolution by Region', index=False)
+                
+                resolution_by_priority = solved_tickets.groupby('Priority')['Resolution Time (Days)'].agg(['mean', 'min', 'max']).reset_index()
+                resolution_by_priority.to_excel(writer, sheet_name='Resolution by Priority', index=False)
+                
+                resolution_by_engineer = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].agg(['mean', 'min', 'max']).reset_index()
+                resolution_by_engineer.to_excel(writer, sheet_name='Resolution by Engineer', index=False)
+        
+        # Seek to the beginning of the stream
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"ticket_overview_{timestamp}.xlsx"
+        
+        # Send the file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=download_filename
+        )
+        
+    except Exception as e:
+        flash(f'Error generating Excel file: {str(e)}')
+        return redirect(url_for('ticket_overview'))
+
+@app.route('/download_region_excel')
+def download_region_excel():
+    filepath = session.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load the original data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Create a BytesIO object to store the Excel file
+        output = io.BytesIO()
+        
+        # Create ExcelWriter object
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Region Status Summary
+            region_status = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            region_status.to_excel(writer, sheet_name='Region Status', index=False)
+            
+            # Resolution Time by Region
+            solved_tickets = df[df['Ticket status'] == 'Solved']
+            if not solved_tickets.empty:
+                region_resolution = solved_tickets.groupby('Region')['Resolution Time (Days)'].agg(['count', 'mean', 'min', 'max']).reset_index()
+                region_resolution.columns = ['Region', 'Ticket Count', 'Avg Resolution Time', 'Min Resolution Time', 'Max Resolution Time']
+                region_resolution.to_excel(writer, sheet_name='Resolution by Region', index=False)
+            
+            # Priority Distribution by Region
+            region_priority = df.groupby(['Region', 'Priority']).size().unstack(fill_value=0).reset_index()
+            region_priority.to_excel(writer, sheet_name='Region Priority', index=False)
+            
+            # Group Distribution by Region
+            region_group = df.groupby(['Region', 'Level 3 Group']).size().unstack(fill_value=0).reset_index()
+            region_group.to_excel(writer, sheet_name='Region Group', index=False)
+        
+        # Seek to the beginning of the stream
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"region_analysis_{timestamp}.xlsx"
+        
+        # Send the file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=download_filename
+        )
+        
+    except Exception as e:
+        flash(f'Error generating Excel file: {str(e)}')
+        return redirect(url_for('region_analysis'))
+
+@app.route('/download_group_excel')
+def download_group_excel():
+    filepath = session.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load the original data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Create a BytesIO object to store the Excel file
+        output = io.BytesIO()
+        
+        # Create ExcelWriter object
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Group Status Summary
+            group_status = df.groupby(['Level 3 Group', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            group_status.to_excel(writer, sheet_name='Group Status', index=False)
+            
+            # Resolution Time by Group
+            solved_tickets = df[df['Ticket status'] == 'Solved']
+            if not solved_tickets.empty:
+                group_resolution = solved_tickets.groupby('Level 3 Group')['Resolution Time (Days)'].agg(['count', 'mean', 'min', 'max']).reset_index()
+                group_resolution.columns = ['Group', 'Ticket Count', 'Avg Resolution Time', 'Min Resolution Time', 'Max Resolution Time']
+                group_resolution.to_excel(writer, sheet_name='Resolution by Group', index=False)
+            
+            # Priority Distribution by Group
+            group_priority = df.groupby(['Level 3 Group', 'Priority']).size().unstack(fill_value=0).reset_index()
+            group_priority.to_excel(writer, sheet_name='Group Priority', index=False)
+            
+            # Region Distribution by Group
+            group_region = df.groupby(['Level 3 Group', 'Region']).size().unstack(fill_value=0).reset_index()
+            group_region.to_excel(writer, sheet_name='Group Region', index=False)
+        
+        # Seek to the beginning of the stream
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"group_analysis_{timestamp}.xlsx"
+        
+        # Send the file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=download_filename
+        )
+        
+    except Exception as e:
+        flash(f'Error generating Excel file: {str(e)}')
+        return redirect(url_for('group_analysis'))
+
+@app.route('/download_engineer_excel')
+def download_engineer_excel():
+    filepath = session.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load the original data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Create a BytesIO object to store the Excel file
+        output = io.BytesIO()
+        
+        # Create ExcelWriter object
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Engineer Status Summary
+            engineer_status = df.groupby(['Assignee name', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            engineer_status.to_excel(writer, sheet_name='Engineer Status', index=False)
+            
+            # Resolution Time by Engineer
+            solved_tickets = df[df['Ticket status'] == 'Solved']
+            if not solved_tickets.empty:
+                engineer_resolution = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].agg(['count', 'mean', 'min', 'max']).reset_index()
+                engineer_resolution.columns = ['Engineer', 'Ticket Count', 'Avg Resolution Time', 'Min Resolution Time', 'Max Resolution Time']
+                engineer_resolution.to_excel(writer, sheet_name='Resolution by Engineer', index=False)
+            
+            # Region Distribution by Engineer
+            engineer_region = df.groupby(['Assignee name', 'Region']).size().unstack(fill_value=0).reset_index()
+            engineer_region.to_excel(writer, sheet_name='Engineer Region', index=False)
+            
+            # Priority Distribution by Engineer
+            engineer_priority = df.groupby(['Assignee name', 'Priority']).size().unstack(fill_value=0).reset_index()
+            engineer_priority.to_excel(writer, sheet_name='Engineer Priority', index=False)
+        
+        # Seek to the beginning of the stream
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"engineer_analysis_{timestamp}.xlsx"
+        
+        # Send the file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=download_filename
+        )
+        
+    except Exception as e:
+        flash(f'Error generating Excel file: {str(e)}')
+        return redirect(url_for('engineer_analysis'))
+
+@app.route('/download_priority_excel')
+def download_priority_excel():
+    filepath = session.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    try:
+        # Load the original data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Create a BytesIO object to store the Excel file
+        output = io.BytesIO()
+        
+        # Create ExcelWriter object
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Priority Status Summary
+            priority_status = df.groupby(['Priority', 'Ticket status']).size().unstack(fill_value=0).reset_index()
+            priority_status.to_excel(writer, sheet_name='Priority Status', index=False)
+            
+            # Resolution Time by Priority
+            solved_tickets = df[df['Ticket status'] == 'Solved']
+            if not solved_tickets.empty:
+                priority_resolution = solved_tickets.groupby('Priority')['Resolution Time (Days)'].agg(['count', 'mean', 'min', 'max']).reset_index()
+                priority_resolution.columns = ['Priority', 'Ticket Count', 'Avg Resolution Time', 'Min Resolution Time', 'Max Resolution Time']
+                priority_resolution.to_excel(writer, sheet_name='Resolution by Priority', index=False)
+            
+            # Region Distribution by Priority
+            priority_region = df.groupby(['Priority', 'Region']).size().unstack(fill_value=0).reset_index()
+            priority_region.to_excel(writer, sheet_name='Priority Region', index=False)
+            
+            # Group Distribution by Priority
+            priority_group = df.groupby(['Priority', 'Level 3 Group']).size().unstack(fill_value=0).reset_index()
+            priority_group.to_excel(writer, sheet_name='Priority Group', index=False)
+        
+        # Seek to the beginning of the stream
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"priority_analysis_{timestamp}.xlsx"
+        
+        # Send the file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=download_filename
+        )
+        
+    except Exception as e:
+        flash(f'Error generating Excel file: {str(e)}')
+        return redirect(url_for('priority_analysis'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

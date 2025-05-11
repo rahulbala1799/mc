@@ -95,12 +95,24 @@
             background-color: rgba(220, 53, 69, 0.2);
             color: #dc3545;
         }
+        .download-btn {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center dashboard-title">Ticket Analysis Dashboard</h1>
-        <p class="text-center text-muted mb-4">File: {{ filename }}</p>
+        <div class="position-relative">
+            <h1 class="text-center dashboard-title">Ticket Analysis Dashboard</h1>
+            <p class="text-center text-muted mb-4">File: {{ filename }}</p>
+            <div class="download-btn">
+                <a href="{{ url_for('download_overview_excel') }}" class="btn btn-success">
+                    <i class="bi bi-file-excel"></i> Download Excel
+                </a>
+            </div>
+        </div>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %}
