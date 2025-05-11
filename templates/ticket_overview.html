@@ -394,354 +394,443 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Safely parse JSON data from the server 
+        function safeJsonParse(jsonString, defaultValue) {
+            try {
+                return JSON.parse(jsonString);
+            } catch (e) {
+                console.error("Error parsing JSON:", e);
+                return defaultValue;
+            }
+        }
+        
         // Monthly Status Chart
-        const monthlyCtx = document.getElementById('monthlyStatusChart').getContext('2d');
-        new Chart(monthlyCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ monthly_data.labels|tojson }},
-                datasets: [
-                    {
-                        label: 'Solved',
-                        data: {{ monthly_data.solved|tojson }},
-                        backgroundColor: 'rgba(25, 135, 84, 0.7)'
-                    },
-                    {
-                        label: 'Open',
-                        data: {{ monthly_data.open|tojson }},
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
-                    },
-                    {
-                        label: 'Hold',
-                        data: {{ monthly_data.hold|tojson }},
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
+        try {
+            const monthlyCtx = document.getElementById('monthlyStatusChart').getContext('2d');
+            const monthlyLabels = safeJsonParse('{{ monthly_data.labels|tojson }}', []);
+            const monthlySolved = safeJsonParse('{{ monthly_data.solved|tojson }}', []);
+            const monthlyOpen = safeJsonParse('{{ monthly_data.open|tojson }}', []);
+            const monthlyHold = safeJsonParse('{{ monthly_data.hold|tojson }}', []);
+            
+            new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [
+                        {
+                            label: 'Solved',
+                            data: monthlySolved,
+                            backgroundColor: 'rgba(25, 135, 84, 0.7)'
+                        },
+                        {
+                            label: 'Open',
+                            data: monthlyOpen,
+                            backgroundColor: 'rgba(255, 193, 7, 0.7)'
+                        },
+                        {
+                            label: 'Hold',
+                            data: monthlyHold,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error creating monthly chart:", e);
+        }
 
         // Region Status Chart
-        const regionCtx = document.getElementById('regionStatusChart').getContext('2d');
-        new Chart(regionCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ region_data.labels|tojson }},
-                datasets: [
-                    {
-                        label: 'Solved',
-                        data: {{ region_data.solved|tojson }},
-                        backgroundColor: 'rgba(25, 135, 84, 0.7)'
-                    },
-                    {
-                        label: 'Open',
-                        data: {{ region_data.open|tojson }},
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
-                    },
-                    {
-                        label: 'Hold',
-                        data: {{ region_data.hold|tojson }},
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
+        try {
+            const regionCtx = document.getElementById('regionStatusChart').getContext('2d');
+            const regionLabels = safeJsonParse('{{ region_data.labels|tojson }}', []);
+            const regionSolved = safeJsonParse('{{ region_data.solved|tojson }}', []);
+            const regionOpen = safeJsonParse('{{ region_data.open|tojson }}', []);
+            const regionHold = safeJsonParse('{{ region_data.hold|tojson }}', []);
+            
+            new Chart(regionCtx, {
+                type: 'bar',
+                data: {
+                    labels: regionLabels,
+                    datasets: [
+                        {
+                            label: 'Solved',
+                            data: regionSolved,
+                            backgroundColor: 'rgba(25, 135, 84, 0.7)'
+                        },
+                        {
+                            label: 'Open',
+                            data: regionOpen,
+                            backgroundColor: 'rgba(255, 193, 7, 0.7)'
+                        },
+                        {
+                            label: 'Hold',
+                            data: regionHold,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error creating region chart:", e);
+        }
 
         // Engineer Status Chart
-        const engineerCtx = document.getElementById('engineerStatusChart').getContext('2d');
-        new Chart(engineerCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ engineer_data.labels|tojson }},
-                datasets: [
-                    {
-                        label: 'Solved',
-                        data: {{ engineer_data.solved|tojson }},
-                        backgroundColor: 'rgba(25, 135, 84, 0.7)'
-                    },
-                    {
-                        label: 'Open',
-                        data: {{ engineer_data.open|tojson }},
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
-                    },
-                    {
-                        label: 'Hold',
-                        data: {{ engineer_data.hold|tojson }},
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        beginAtZero: true
-                    },
-                    y: {
-                        stacked: true
+        try {
+            const engineerCtx = document.getElementById('engineerStatusChart').getContext('2d');
+            const engineerLabels = safeJsonParse('{{ engineer_data.labels|tojson }}', []);
+            const engineerSolved = safeJsonParse('{{ engineer_data.solved|tojson }}', []);
+            const engineerOpen = safeJsonParse('{{ engineer_data.open|tojson }}', []);
+            const engineerHold = safeJsonParse('{{ engineer_data.hold|tojson }}', []);
+            
+            new Chart(engineerCtx, {
+                type: 'bar',
+                data: {
+                    labels: engineerLabels,
+                    datasets: [
+                        {
+                            label: 'Solved',
+                            data: engineerSolved,
+                            backgroundColor: 'rgba(25, 135, 84, 0.7)'
+                        },
+                        {
+                            label: 'Open',
+                            data: engineerOpen,
+                            backgroundColor: 'rgba(255, 193, 7, 0.7)'
+                        },
+                        {
+                            label: 'Hold',
+                            data: engineerHold,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            beginAtZero: true
+                        },
+                        y: {
+                            stacked: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error creating engineer chart:", e);
+        }
 
         // Priority Status Chart
-        const priorityCtx = document.getElementById('priorityStatusChart').getContext('2d');
-        new Chart(priorityCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ priority_data.labels|tojson }},
-                datasets: [
-                    {
-                        label: 'Solved',
-                        data: {{ priority_data.solved|tojson }},
-                        backgroundColor: 'rgba(25, 135, 84, 0.7)'
-                    },
-                    {
-                        label: 'Open',
-                        data: {{ priority_data.open|tojson }},
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
-                    },
-                    {
-                        label: 'Hold',
-                        data: {{ priority_data.hold|tojson }},
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
+        try {
+            const priorityCtx = document.getElementById('priorityStatusChart').getContext('2d');
+            const priorityLabels = safeJsonParse('{{ priority_data.labels|tojson }}', []);
+            const prioritySolved = safeJsonParse('{{ priority_data.solved|tojson }}', []);
+            const priorityOpen = safeJsonParse('{{ priority_data.open|tojson }}', []);
+            const priorityHold = safeJsonParse('{{ priority_data.hold|tojson }}', []);
+            
+            new Chart(priorityCtx, {
+                type: 'bar',
+                data: {
+                    labels: priorityLabels,
+                    datasets: [
+                        {
+                            label: 'Solved',
+                            data: prioritySolved,
+                            backgroundColor: 'rgba(25, 135, 84, 0.7)'
+                        },
+                        {
+                            label: 'Open',
+                            data: priorityOpen,
+                            backgroundColor: 'rgba(255, 193, 7, 0.7)'
+                        },
+                        {
+                            label: 'Hold',
+                            data: priorityHold,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error creating priority chart:", e);
+        }
 
         // Region and Group Chart
-        const regionGroupCtx = document.getElementById('regionGroupChart').getContext('2d');
-        new Chart(regionGroupCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ region_group_data.labels|tojson }},
-                datasets: {{ region_group_data.datasets|tojson }}
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
+        try {
+            const regionGroupCtx = document.getElementById('regionGroupChart').getContext('2d');
+            const regionGroupLabels = safeJsonParse('{{ region_group_data.labels|tojson }}', []);
+            const regionGroupDatasets = safeJsonParse('{{ region_group_data.datasets|tojson }}', []);
+            
+            new Chart(regionGroupCtx, {
+                type: 'bar',
+                data: {
+                    labels: regionGroupLabels,
+                    datasets: regionGroupDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error creating region group chart:", e);
+        }
 
         // Backlog Trend Chart
-        const backlogTrendCtx = document.getElementById('backlogTrendChart').getContext('2d');
-        new Chart(backlogTrendCtx, {
-            type: 'line',
-            data: {
-                labels: {{ backlog_data.labels|tojson }},
-                datasets: [
-                    {
-                        label: 'Backlog',
-                        data: {{ backlog_data.backlog_count|tojson }},
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        borderColor: 'rgba(220, 53, 69, 0.8)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
+        try {
+            const backlogTrendCtx = document.getElementById('backlogTrendChart');
+            if (backlogTrendCtx) {
+                const backlogLabels = safeJsonParse('{{ backlog_data.labels|tojson }}', []);
+                const backlogCounts = safeJsonParse('{{ backlog_data.backlog_count|tojson }}', []);
+                const newTickets = safeJsonParse('{{ backlog_data.new_tickets|tojson }}', []);
+                const solvedTickets = safeJsonParse('{{ backlog_data.solved_tickets|tojson }}', []);
+                
+                new Chart(backlogTrendCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: backlogLabels,
+                        datasets: [
+                            {
+                                label: 'Backlog',
+                                data: backlogCounts,
+                                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                borderColor: 'rgba(220, 53, 69, 0.8)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'New Tickets',
+                                data: newTickets,
+                                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                borderColor: 'rgba(13, 110, 253, 0.8)',
+                                borderWidth: 2,
+                                fill: false
+                            },
+                            {
+                                label: 'Solved Tickets',
+                                data: solvedTickets,
+                                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                                borderColor: 'rgba(25, 135, 84, 0.8)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
                     },
-                    {
-                        label: 'New Tickets',
-                        data: {{ backlog_data.new_tickets|tojson }},
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        borderColor: 'rgba(13, 110, 253, 0.8)',
-                        borderWidth: 2,
-                        fill: false
-                    },
-                    {
-                        label: 'Solved Tickets',
-                        data: {{ backlog_data.solved_tickets|tojson }},
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        borderColor: 'rgba(25, 135, 84, 0.8)',
-                        borderWidth: 2,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Monthly Backlog Trend',
-                        font: {
-                            size: 16
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Tickets'
-                        }
-                    }
-                }
-            }
-        });
-
-        // Backlog Age Chart
-        const backlogAgeCtx = document.getElementById('backlogAgeChart').getContext('2d');
-        new Chart(backlogAgeCtx, {
-            type: 'doughnut',
-            data: {
-                labels: {{ backlog_age_data.labels|tojson }},
-                datasets: [{
-                    data: {{ backlog_age_data.counts|tojson }},
-                    backgroundColor: [
-                        'rgba(25, 135, 84, 0.7)',
-                        'rgba(255, 193, 7, 0.7)',
-                        'rgba(13, 202, 240, 0.7)',
-                        'rgba(220, 53, 69, 0.7)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 12,
-                            font: {
-                                size: 11
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Monthly Backlog Trend',
+                                font: {
+                                    size: 16
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Tickets'
+                                }
                             }
                         }
                     }
-                }
+                });
             }
-        });
+        } catch (e) {
+            console.error("Error creating backlog trend chart:", e);
+        }
 
-        // Get the latest backlog priority breakdown
-        const latestPriorityData = {{ backlog_data.priority_breakdown[-1] if backlog_data.priority_breakdown else {}|tojson }};
-        const priorityLabels = Object.keys(latestPriorityData);
-        const priorityCounts = Object.values(latestPriorityData);
+        // Backlog Age Chart
+        try {
+            const backlogAgeCtx = document.getElementById('backlogAgeChart');
+            if (backlogAgeCtx) {
+                const ageLabels = safeJsonParse('{{ backlog_age_data.labels|tojson }}', []);
+                const ageCounts = safeJsonParse('{{ backlog_age_data.counts|tojson }}', []);
+                
+                new Chart(backlogAgeCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ageLabels,
+                        datasets: [{
+                            data: ageCounts,
+                            backgroundColor: [
+                                'rgba(25, 135, 84, 0.7)',
+                                'rgba(255, 193, 7, 0.7)',
+                                'rgba(13, 202, 240, 0.7)',
+                                'rgba(220, 53, 69, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Error creating backlog age chart:", e);
+        }
 
         // Backlog Priority Chart
-        const backlogPriorityCtx = document.getElementById('backlogPriorityChart').getContext('2d');
-        new Chart(backlogPriorityCtx, {
-            type: 'pie',
-            data: {
-                labels: priorityLabels,
-                datasets: [{
-                    data: priorityCounts,
-                    backgroundColor: [
-                        'rgba(220, 53, 69, 0.7)',   // High/Urgent
-                        'rgba(255, 193, 7, 0.7)',   // Normal
-                        'rgba(25, 135, 84, 0.7)',   // Low
-                        'rgba(13, 202, 240, 0.7)'   // Others
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 12
+        try {
+            const backlogPriorityCtx = document.getElementById('backlogPriorityChart');
+            if (backlogPriorityCtx) {
+                // Get the latest backlog priority breakdown or empty object if not available
+                let lastPriorityBreakdown = safeJsonParse('{{ backlog_data.priority_breakdown|tojson }}', []);
+                let latestPriorityData = lastPriorityBreakdown.length > 0 ? lastPriorityBreakdown[lastPriorityBreakdown.length - 1] : {};
+                
+                const priorityLabels = Object.keys(latestPriorityData);
+                const priorityCounts = Object.values(latestPriorityData);
+                
+                new Chart(backlogPriorityCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: priorityLabels.length > 0 ? priorityLabels : ['No Data'],
+                        datasets: [{
+                            data: priorityCounts.length > 0 ? priorityCounts : [1],
+                            backgroundColor: [
+                                'rgba(220, 53, 69, 0.7)',
+                                'rgba(255, 193, 7, 0.7)',
+                                'rgba(25, 135, 84, 0.7)',
+                                'rgba(13, 202, 240, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12
+                                }
+                            }
                         }
                     }
-                }
+                });
             }
-        });
-
-        // Get the latest backlog region breakdown
-        const latestRegionData = {{ backlog_data.region_breakdown[-1] if backlog_data.region_breakdown else {}|tojson }};
-        const regionLabels = Object.keys(latestRegionData);
-        const regionCounts = Object.values(latestRegionData);
+        } catch (e) {
+            console.error("Error creating backlog priority chart:", e);
+        }
 
         // Backlog Region Chart
-        const backlogRegionCtx = document.getElementById('backlogRegionChart').getContext('2d');
-        new Chart(backlogRegionCtx, {
-            type: 'pie',
-            data: {
-                labels: regionLabels,
-                datasets: [{
-                    data: regionCounts,
-                    backgroundColor: [
-                        'rgba(13, 110, 253, 0.7)',
-                        'rgba(102, 16, 242, 0.7)',
-                        'rgba(253, 126, 20, 0.7)',
-                        'rgba(32, 201, 151, 0.7)',
-                        'rgba(13, 202, 240, 0.7)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 12
+        try {
+            const backlogRegionCtx = document.getElementById('backlogRegionChart');
+            if (backlogRegionCtx) {
+                // Get the latest backlog region breakdown or empty object if not available
+                let lastRegionBreakdown = safeJsonParse('{{ backlog_data.region_breakdown|tojson }}', []);
+                let latestRegionData = lastRegionBreakdown.length > 0 ? lastRegionBreakdown[lastRegionBreakdown.length - 1] : {};
+                
+                const regionLabels = Object.keys(latestRegionData);
+                const regionCounts = Object.values(latestRegionData);
+                
+                new Chart(backlogRegionCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: regionLabels.length > 0 ? regionLabels : ['No Data'],
+                        datasets: [{
+                            data: regionCounts.length > 0 ? regionCounts : [1],
+                            backgroundColor: [
+                                'rgba(13, 110, 253, 0.7)',
+                                'rgba(102, 16, 242, 0.7)',
+                                'rgba(253, 126, 20, 0.7)',
+                                'rgba(32, 201, 151, 0.7)',
+                                'rgba(13, 202, 240, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12
+                                }
+                            }
                         }
                     }
-                }
+                });
             }
-        });
+        } catch (e) {
+            console.error("Error creating backlog region chart:", e);
+        }
     });
     </script>
 

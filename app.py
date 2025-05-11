@@ -210,8 +210,7 @@ def ticket_overview():
         # --- Prepare data for Dashboard Charts ---
         
         # Add month and year columns for analysis
-        df['Month'] = df['Logged - Date'].dt.strftime('%Y-%m')
-        df['Year-Month'] = df['Logged - Date'].dt.to_period('M')
+        df['Month'] = pd.to_datetime(df['Logged - Date']).dt.strftime('%Y-%m')
         
         # Open vs Solved by Month
         monthly_status = df.groupby(['Month', 'Ticket status']).size().unstack(fill_value=0).reset_index()
@@ -229,105 +228,145 @@ def ticket_overview():
             'hold': monthly_status['Hold'].tolist()
         }
         
-        # Backlog Analysis - tickets that remain unsolved from previous months
-        # Sort DataFrame by month to process chronologically
-        df_sorted = df.sort_values('Logged - Date')
-        
-        # Get unique months in sorted order
-        unique_months = df_sorted['Month'].drop_duplicates().tolist()
-        
-        # Initialize backlog tracking
-        backlog_data = {
-            'labels': [],
-            'backlog_count': [],
-            'new_tickets': [],
-            'solved_tickets': [],
-            'priority_breakdown': [],
-            'region_breakdown': []
-        }
-        
-        # Track tickets present in each month
-        current_tickets = set()
-        backlog_tickets = set()
-        
-        for month in unique_months:
-            # Get tickets from this month
-            month_df = df[df['Month'] == month]
+        # Backlog Analysis with error handling
+        try:
+            # Sort DataFrame by month to process chronologically
+            df_sorted = df.sort_values('Logged - Date')
             
-            # New tickets this month
-            new_ticket_ids = set(month_df['Ticket ID'].tolist())
-            new_count = len(new_ticket_ids)
+            # Ensure Ticket ID exists and is not null
+            if 'Ticket ID' not in df.columns or df['Ticket ID'].isnull().any():
+                raise ValueError("Missing or null Ticket IDs found")
             
-            # Solved tickets this month
-            solved_month_df = month_df[month_df['Ticket status'] == 'Solved']
-            solved_ticket_ids = set(solved_month_df['Ticket ID'].tolist())
-            solved_count = len(solved_ticket_ids)
+            # Get unique months in sorted order
+            unique_months = df_sorted['Month'].dropna().unique().tolist()
             
-            # Update current tickets
-            current_tickets = current_tickets.union(new_ticket_ids)
+            if not unique_months:
+                raise ValueError("No valid months found for backlog analysis")
             
-            # Remove solved tickets from tracking
-            current_tickets = current_tickets - solved_ticket_ids
+            # Initialize backlog tracking
+            backlog_data = {
+                'labels': [],
+                'backlog_count': [],
+                'new_tickets': [],
+                'solved_tickets': [],
+                'priority_breakdown': [],
+                'region_breakdown': []
+            }
             
-            # Backlog is anything in current_tickets that wasn't new this month
-            backlog_tickets = current_tickets - new_ticket_ids
-            backlog_count = len(backlog_tickets)
+            # Track tickets present in each month
+            current_tickets = set()
+            backlog_tickets = set()
             
-            # Get backlog tickets from the DataFrame
-            backlog_df = df[df['Ticket ID'].isin(backlog_tickets)]
+            for month in unique_months:
+                # Get tickets from this month (with validation)
+                month_df = df[df['Month'] == month]
+                if month_df.empty:
+                    continue
+                
+                # New tickets this month
+                new_ticket_ids = set(month_df['Ticket ID'].dropna().astype(str).tolist())
+                new_count = len(new_ticket_ids)
+                
+                # Solved tickets this month
+                solved_month_df = month_df[month_df['Ticket status'] == 'Solved']
+                solved_ticket_ids = set(solved_month_df['Ticket ID'].dropna().astype(str).tolist())
+                solved_count = len(solved_ticket_ids)
+                
+                # Update current tickets
+                current_tickets = current_tickets.union(new_ticket_ids)
+                
+                # Remove solved tickets from tracking
+                current_tickets = current_tickets - solved_ticket_ids
+                
+                # Backlog is anything in current_tickets that wasn't new this month
+                backlog_tickets = current_tickets - new_ticket_ids
+                backlog_count = len(backlog_tickets)
+                
+                # Get backlog tickets from the DataFrame (with validation)
+                backlog_df = df[df['Ticket ID'].astype(str).isin(backlog_tickets)]
+                
+                # Get priority breakdown for backlog
+                priority_breakdown = {}
+                if not backlog_df.empty and 'Priority' in backlog_df.columns:
+                    priority_counts = backlog_df['Priority'].value_counts().to_dict()
+                    for priority, count in priority_counts.items():
+                        if pd.notna(priority):  # Skip NaN priorities
+                            priority_breakdown[str(priority)] = count
+                
+                # Get region breakdown for backlog
+                region_breakdown = {}
+                if not backlog_df.empty and 'Region' in backlog_df.columns:
+                    region_counts = backlog_df['Region'].value_counts().to_dict()
+                    for region, count in region_counts.items():
+                        if pd.notna(region):  # Skip NaN regions
+                            region_breakdown[str(region)] = count
+                
+                # Save data for this month
+                backlog_data['labels'].append(month)
+                backlog_data['backlog_count'].append(backlog_count)
+                backlog_data['new_tickets'].append(new_count)
+                backlog_data['solved_tickets'].append(solved_count)
+                backlog_data['priority_breakdown'].append(priority_breakdown)
+                backlog_data['region_breakdown'].append(region_breakdown)
             
-            # Get priority breakdown for backlog
-            priority_breakdown = {}
-            if not backlog_df.empty:
-                priority_counts = backlog_df['Priority'].value_counts().to_dict()
-                for priority, count in priority_counts.items():
-                    priority_breakdown[priority] = count
+            # Calculate current backlog age distribution
+            current_open_tickets = df[(df['Ticket status'] == 'Open') | (df['Ticket status'] == 'Hold')]
             
-            # Get region breakdown for backlog
-            region_breakdown = {}
-            if not backlog_df.empty:
-                region_counts = backlog_df['Region'].value_counts().to_dict()
-                for region, count in region_counts.items():
-                    region_breakdown[region] = count
+            # Calculate age of tickets in days
+            current_date = pd.Timestamp.today()
+            current_open_tickets['age_days'] = (current_date - pd.to_datetime(current_open_tickets['Logged - Date'])).dt.days
             
-            # Save data for this month
-            backlog_data['labels'].append(month)
-            backlog_data['backlog_count'].append(backlog_count)
-            backlog_data['new_tickets'].append(new_count)
-            backlog_data['solved_tickets'].append(solved_count)
-            backlog_data['priority_breakdown'].append(priority_breakdown)
-            backlog_data['region_breakdown'].append(region_breakdown)
-        
-        # Calculate current backlog age distribution
-        current_open_tickets = df[(df['Ticket status'] == 'Open') | (df['Ticket status'] == 'Hold')]
-        
-        # Calculate age of tickets in days
-        current_date = pd.Timestamp.today()
-        current_open_tickets['age_days'] = (current_date - current_open_tickets['Logged - Date']).dt.days
-        
-        # Age buckets
-        age_buckets = {
-            '< 30 days': 0,
-            '30-60 days': 0,
-            '60-90 days': 0,
-            '> 90 days': 0
-        }
-        
-        for _, ticket in current_open_tickets.iterrows():
-            age = ticket['age_days']
-            if age < 30:
-                age_buckets['< 30 days'] += 1
-            elif age < 60:
-                age_buckets['30-60 days'] += 1
-            elif age < 90:
-                age_buckets['60-90 days'] += 1
-            else:
-                age_buckets['> 90 days'] += 1
-        
-        backlog_age_data = {
-            'labels': list(age_buckets.keys()),
-            'counts': list(age_buckets.values())
-        }
+            # Check for negative ages (future dates) and reset them to 0
+            current_open_tickets.loc[current_open_tickets['age_days'] < 0, 'age_days'] = 0
+            
+            # Age buckets
+            age_buckets = {
+                '< 30 days': 0,
+                '30-60 days': 0,
+                '60-90 days': 0,
+                '> 90 days': 0
+            }
+            
+            for _, ticket in current_open_tickets.iterrows():
+                if pd.isna(ticket['age_days']):
+                    continue
+                    
+                age = ticket['age_days']
+                if age < 30:
+                    age_buckets['< 30 days'] += 1
+                elif age < 60:
+                    age_buckets['30-60 days'] += 1
+                elif age < 90:
+                    age_buckets['60-90 days'] += 1
+                else:
+                    age_buckets['> 90 days'] += 1
+            
+            backlog_age_data = {
+                'labels': list(age_buckets.keys()),
+                'counts': list(age_buckets.values())
+            }
+            
+            # Calculate oldest ticket age safely
+            oldest_ticket_age = 0
+            if not current_open_tickets.empty and not current_open_tickets['age_days'].isnull().all():
+                oldest_ticket_age = int(current_open_tickets['age_days'].max())
+            
+        except Exception as e:
+            print(f"Error in backlog calculation: {str(e)}")
+            # Provide default empty data if backlog calculation fails
+            backlog_data = {
+                'labels': ['No Data'],
+                'backlog_count': [0],
+                'new_tickets': [0],
+                'solved_tickets': [0],
+                'priority_breakdown': [{}],
+                'region_breakdown': [{}]
+            }
+            backlog_age_data = {
+                'labels': ['< 30 days', '30-60 days', '60-90 days', '> 90 days'],
+                'counts': [0, 0, 0, 0]
+            }
+            oldest_ticket_age = 0
         
         # Open vs Solved by Region
         region_status = df.groupby(['Region', 'Ticket status']).size().unstack(fill_value=0).reset_index()
@@ -387,47 +426,61 @@ def ticket_overview():
         # Get top 5 most common groups for readability
         top_groups = df['Level 3 Group'].value_counts().head(5).index.tolist()
         
-        # Filter data to include only top groups
-        filtered_df = df[df['Level 3 Group'].isin(top_groups)]
-        
-        # Create region-group combinations for x-axis labels
-        region_group_combinations = filtered_df.groupby(['Region', 'Level 3 Group']).size().reset_index()
-        region_group_labels = [f"{row['Region']} - {row['Level 3 Group']}" for _, row in region_group_combinations.iterrows()]
-        
-        # Create datasets for each status
-        region_group_datasets = []
-        for status in ['Solved', 'Open', 'Hold']:
-            status_data = []
-            for _, row in region_group_combinations.iterrows():
-                count = len(filtered_df[(filtered_df['Region'] == row['Region']) & 
-                                       (filtered_df['Level 3 Group'] == row['Level 3 Group']) & 
-                                       (filtered_df['Ticket status'] == status)])
-                status_data.append(count)
+        # Handle edge case of no data
+        if not top_groups:
+            region_group_data = {
+                'labels': ['No Data'],
+                'datasets': [{
+                    'label': 'No Data',
+                    'data': [0],
+                    'backgroundColor': 'rgba(200, 200, 200, 0.7)'
+                }]
+            }
+        else:
+            # Filter data to include only top groups
+            filtered_df = df[df['Level 3 Group'].isin(top_groups)]
             
-            # Different color for each status
-            if status == 'Solved':
-                color = 'rgba(25, 135, 84, 0.7)'
-            elif status == 'Open':
-                color = 'rgba(255, 193, 7, 0.7)'
-            else:  # Hold
-                color = 'rgba(220, 53, 69, 0.7)'
+            # Create region-group combinations for x-axis labels
+            region_group_combinations = filtered_df.groupby(['Region', 'Level 3 Group']).size().reset_index()
+            region_group_labels = [f"{row['Region']} - {row['Level 3 Group']}" for _, row in region_group_combinations.iterrows()]
+            
+            # Create datasets for each status
+            region_group_datasets = []
+            for status in ['Solved', 'Open', 'Hold']:
+                status_data = []
+                for _, row in region_group_combinations.iterrows():
+                    count = len(filtered_df[(filtered_df['Region'] == row['Region']) & 
+                                           (filtered_df['Level 3 Group'] == row['Level 3 Group']) & 
+                                           (filtered_df['Ticket status'] == status)])
+                    status_data.append(count)
                 
-            region_group_datasets.append({
-                'label': status,
-                'data': status_data,
-                'backgroundColor': color
-            })
-        
-        region_group_data = {
-            'labels': region_group_labels,
-            'datasets': region_group_datasets
-        }
+                # Different color for each status
+                if status == 'Solved':
+                    color = 'rgba(25, 135, 84, 0.7)'
+                elif status == 'Open':
+                    color = 'rgba(255, 193, 7, 0.7)'
+                else:  # Hold
+                    color = 'rgba(220, 53, 69, 0.7)'
+                    
+                region_group_datasets.append({
+                    'label': status,
+                    'data': status_data,
+                    'backgroundColor': color
+                })
+            
+            region_group_data = {
+                'labels': region_group_labels,
+                'datasets': region_group_datasets
+            }
         
         # Generate preview table
         preview_html = df.head(10).to_html(classes='table table-striped table-hover', index=False)
         
         # Store the dataframe in a session variable for other routes
         session['ticket_data_processed'] = True
+        
+        # Calculate current backlog count
+        current_backlog = open_count + hold_count
         
         metrics = {
             'all_tickets_avg': round(all_tickets_mean, 1) if not pd.isna(all_tickets_mean) else "N/A",
@@ -444,8 +497,8 @@ def ticket_overview():
             'open_percentage': open_percentage,
             'hold_percentage': hold_percentage,
             'within_sla_percentage': within_sla_percentage,
-            'current_backlog': len(current_open_tickets),
-            'oldest_ticket_age': current_open_tickets['age_days'].max() if not current_open_tickets.empty else 0
+            'current_backlog': current_backlog,
+            'oldest_ticket_age': oldest_ticket_age if 'oldest_ticket_age' in locals() else 0
         }
         
         return render_template(
@@ -463,6 +516,8 @@ def ticket_overview():
         )
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         flash(f'Error analyzing ticket data: {str(e)}')
         return redirect(url_for('index'))
 
