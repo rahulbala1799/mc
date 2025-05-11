@@ -288,6 +288,34 @@
                         <div class="chart-container">
                             <canvas id="regionStatusChart"></canvas>
                         </div>
+                        <!-- Add data table for regions -->
+                        <div class="table-responsive mt-4">
+                            <h6 class="mb-2">Region Details</h6>
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Region</th>
+                                        <th class="text-center">Solved</th>
+                                        <th class="text-center">Open</th>
+                                        <th class="text-center">Hold</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center">Avg. Resolution (days)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for region, solved in region_details.items() %}
+                                    <tr>
+                                        <td>{{ region }}</td>
+                                        <td class="text-center">{{ solved }}</td>
+                                        <td class="text-center">{{ region_details_open.get(region, 0) }}</td>
+                                        <td class="text-center">{{ region_details_hold.get(region, 0) }}</td>
+                                        <td class="text-center">{{ solved + region_details_open.get(region, 0) + region_details_hold.get(region, 0) }}</td>
+                                        <td class="text-center">{{ metrics.by_region.get(region, "N/A") }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -302,6 +330,34 @@
                         <div class="chart-container">
                             <canvas id="engineerStatusChart"></canvas>
                         </div>
+                        <!-- Add data table for engineers -->
+                        <div class="table-responsive mt-4">
+                            <h6 class="mb-2">Engineer Details</h6>
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Engineer</th>
+                                        <th class="text-center">Solved</th>
+                                        <th class="text-center">Open</th>
+                                        <th class="text-center">Hold</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center">Avg. Resolution (days)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for engineer, solved in engineer_details.items() %}
+                                    <tr>
+                                        <td>{{ engineer }}</td>
+                                        <td class="text-center">{{ solved }}</td>
+                                        <td class="text-center">{{ engineer_details_open.get(engineer, 0) }}</td>
+                                        <td class="text-center">{{ engineer_details_hold.get(engineer, 0) }}</td>
+                                        <td class="text-center">{{ solved + engineer_details_open.get(engineer, 0) + engineer_details_hold.get(engineer, 0) }}</td>
+                                        <td class="text-center">{{ metrics.by_engineer.get(engineer, "N/A") }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -315,6 +371,34 @@
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="priorityStatusChart"></canvas>
+                        </div>
+                        <!-- Add data table for priorities -->
+                        <div class="table-responsive mt-4">
+                            <h6 class="mb-2">Priority Details</h6>
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th class="text-center">Solved</th>
+                                        <th class="text-center">Open</th>
+                                        <th class="text-center">Hold</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center">Avg. Resolution (days)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for priority, solved in priority_details.items() %}
+                                    <tr>
+                                        <td>{{ priority }}</td>
+                                        <td class="text-center">{{ solved }}</td>
+                                        <td class="text-center">{{ priority_details_open.get(priority, 0) }}</td>
+                                        <td class="text-center">{{ priority_details_hold.get(priority, 0) }}</td>
+                                        <td class="text-center">{{ solved + priority_details_open.get(priority, 0) + priority_details_hold.get(priority, 0) }}</td>
+                                        <td class="text-center">{{ metrics.by_priority.get(priority, "N/A") }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

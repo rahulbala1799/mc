@@ -501,6 +501,63 @@ def ticket_overview():
             'oldest_ticket_age': oldest_ticket_age if 'oldest_ticket_age' in locals() else 0
         }
         
+        # Generate data for tables
+        # Region details
+        region_details = {}  # Solved counts
+        region_details_open = {}  # Open counts
+        region_details_hold = {}  # Hold counts
+
+        for region in df['Region'].unique():
+            region_details[region] = len(df[(df['Region'] == region) & (df['Ticket status'] == 'Solved')])
+            region_details_open[region] = len(df[(df['Region'] == region) & (df['Ticket status'] == 'Open')])
+            region_details_hold[region] = len(df[(df['Region'] == region) & (df['Ticket status'] == 'Hold')])
+
+        # Sort by total tickets
+        region_total = {region: solved + region_details_open.get(region, 0) + region_details_hold.get(region, 0) 
+                       for region, solved in region_details.items()}
+        region_details = dict(sorted(region_details.items(), key=lambda x: region_total.get(x[0], 0), reverse=True))
+
+        # Engineer details
+        engineer_details = {}  # Solved counts
+        engineer_details_open = {}  # Open counts
+        engineer_details_hold = {}  # Hold counts
+
+        # Get top engineers by total ticket count
+        top_engineers = engineer_counts.head(10).index.tolist()
+
+        for engineer in top_engineers:
+            engineer_details[engineer] = len(df[(df['Assignee name'] == engineer) & (df['Ticket status'] == 'Solved')])
+            engineer_details_open[engineer] = len(df[(df['Assignee name'] == engineer) & (df['Ticket status'] == 'Open')])
+            engineer_details_hold[engineer] = len(df[(df['Assignee name'] == engineer) & (df['Ticket status'] == 'Hold')])
+
+        # Priority details
+        priority_details = {}  # Solved counts
+        priority_details_open = {}  # Open counts
+        priority_details_hold = {}  # Hold counts
+
+        for priority in df['Priority'].unique():
+            priority_details[priority] = len(df[(df['Priority'] == priority) & (df['Ticket status'] == 'Solved')])
+            priority_details_open[priority] = len(df[(df['Priority'] == priority) & (df['Ticket status'] == 'Open')])
+            priority_details_hold[priority] = len(df[(df['Priority'] == priority) & (df['Ticket status'] == 'Hold')])
+
+        # Group details
+        group_details = {}  # Solved counts
+        group_details_open = {}  # Open counts
+        group_details_hold = {}  # Hold counts
+
+        # Get top groups by total ticket count
+        top_groups_all = df['Level 3 Group'].value_counts().head(10).index.tolist()
+
+        for group in top_groups_all:
+            group_details[group] = len(df[(df['Level 3 Group'] == group) & (df['Ticket status'] == 'Solved')])
+            group_details_open[group] = len(df[(df['Level 3 Group'] == group) & (df['Ticket status'] == 'Open')])
+            group_details_hold[group] = len(df[(df['Level 3 Group'] == group) & (df['Ticket status'] == 'Hold')])
+
+        # Sort by total tickets
+        group_total = {group: solved + group_details_open.get(group, 0) + group_details_hold.get(group, 0) 
+                      for group, solved in group_details.items()}
+        group_details = dict(sorted(group_details.items(), key=lambda x: group_total.get(x[0], 0), reverse=True))
+
         return render_template(
             'ticket_overview.html',
             filename=filename,
@@ -512,7 +569,20 @@ def ticket_overview():
             priority_data=priority_data,
             region_group_data=region_group_data,
             backlog_data=backlog_data,
-            backlog_age_data=backlog_age_data
+            backlog_age_data=backlog_age_data,
+            # New table data
+            region_details=region_details,
+            region_details_open=region_details_open,
+            region_details_hold=region_details_hold,
+            engineer_details=engineer_details,
+            engineer_details_open=engineer_details_open,
+            engineer_details_hold=engineer_details_hold,
+            priority_details=priority_details,
+            priority_details_open=priority_details_open,
+            priority_details_hold=priority_details_hold,
+            group_details=group_details,
+            group_details_open=group_details_open,
+            group_details_hold=group_details_hold
         )
         
     except Exception as e:
