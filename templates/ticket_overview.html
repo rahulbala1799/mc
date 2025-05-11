@@ -183,6 +183,85 @@
             </div>
         </div>
 
+        <!-- Backlog Overview Card -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-hourglass-split header-icon"></i>Backlog Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-danger">{{ metrics.current_backlog }}</div>
+                                    <div class="stat-label">Current Backlog</div>
+                                    <div class="mt-2">
+                                        <span class="ratio-indicator {% if metrics.current_backlog < 10 %}ratio-good{% elif metrics.current_backlog < 50 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                                            {{ ((metrics.current_backlog / metrics.total_tickets) * 100)|round|int }}% of total
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-warning">{{ metrics.oldest_ticket_age }}</div>
+                                    <div class="stat-label">Oldest Ticket (days)</div>
+                                    <div class="mt-2">
+                                        <span class="ratio-indicator {% if metrics.oldest_ticket_age < 30 %}ratio-good{% elif metrics.oldest_ticket_age < 90 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                                            Age of oldest open ticket
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-3 text-muted">Backlog Age Distribution</h6>
+                                        <div style="height: 150px">
+                                            <canvas id="backlogAgeChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Backlog Trend Chart -->
+                        <div class="chart-container">
+                            <canvas id="backlogTrendChart"></canvas>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Latest Backlog by Priority</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container" style="height: 200px">
+                                            <canvas id="backlogPriorityChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Latest Backlog by Region</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container" style="height: 200px">
+                                            <canvas id="backlogRegionChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Dashboard Charts -->
         <div class="row">
             <!-- Open vs Solved by Month -->
@@ -490,6 +569,175 @@
                     y: {
                         stacked: true,
                         beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Backlog Trend Chart
+        const backlogTrendCtx = document.getElementById('backlogTrendChart').getContext('2d');
+        new Chart(backlogTrendCtx, {
+            type: 'line',
+            data: {
+                labels: {{ backlog_data.labels|tojson }},
+                datasets: [
+                    {
+                        label: 'Backlog',
+                        data: {{ backlog_data.backlog_count|tojson }},
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderColor: 'rgba(220, 53, 69, 0.8)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'New Tickets',
+                        data: {{ backlog_data.new_tickets|tojson }},
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderColor: 'rgba(13, 110, 253, 0.8)',
+                        borderWidth: 2,
+                        fill: false
+                    },
+                    {
+                        label: 'Solved Tickets',
+                        data: {{ backlog_data.solved_tickets|tojson }},
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        borderColor: 'rgba(25, 135, 84, 0.8)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Backlog Trend',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Tickets'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Backlog Age Chart
+        const backlogAgeCtx = document.getElementById('backlogAgeChart').getContext('2d');
+        new Chart(backlogAgeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ backlog_age_data.labels|tojson }},
+                datasets: [{
+                    data: {{ backlog_age_data.counts|tojson }},
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.7)',
+                        'rgba(255, 193, 7, 0.7)',
+                        'rgba(13, 202, 240, 0.7)',
+                        'rgba(220, 53, 69, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Get the latest backlog priority breakdown
+        const latestPriorityData = {{ backlog_data.priority_breakdown[-1] if backlog_data.priority_breakdown else {}|tojson }};
+        const priorityLabels = Object.keys(latestPriorityData);
+        const priorityCounts = Object.values(latestPriorityData);
+
+        // Backlog Priority Chart
+        const backlogPriorityCtx = document.getElementById('backlogPriorityChart').getContext('2d');
+        new Chart(backlogPriorityCtx, {
+            type: 'pie',
+            data: {
+                labels: priorityLabels,
+                datasets: [{
+                    data: priorityCounts,
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.7)',   // High/Urgent
+                        'rgba(255, 193, 7, 0.7)',   // Normal
+                        'rgba(25, 135, 84, 0.7)',   // Low
+                        'rgba(13, 202, 240, 0.7)'   // Others
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12
+                        }
+                    }
+                }
+            }
+        });
+
+        // Get the latest backlog region breakdown
+        const latestRegionData = {{ backlog_data.region_breakdown[-1] if backlog_data.region_breakdown else {}|tojson }};
+        const regionLabels = Object.keys(latestRegionData);
+        const regionCounts = Object.values(latestRegionData);
+
+        // Backlog Region Chart
+        const backlogRegionCtx = document.getElementById('backlogRegionChart').getContext('2d');
+        new Chart(backlogRegionCtx, {
+            type: 'pie',
+            data: {
+                labels: regionLabels,
+                datasets: [{
+                    data: regionCounts,
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(102, 16, 242, 0.7)',
+                        'rgba(253, 126, 20, 0.7)',
+                        'rgba(32, 201, 151, 0.7)',
+                        'rgba(13, 202, 240, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12
+                        }
                     }
                 }
             }

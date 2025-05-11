@@ -209,8 +209,11 @@ def ticket_overview():
 
         # --- Prepare data for Dashboard Charts ---
         
-        # Open vs Solved by Month
+        # Add month and year columns for analysis
         df['Month'] = df['Logged - Date'].dt.strftime('%Y-%m')
+        df['Year-Month'] = df['Logged - Date'].dt.to_period('M')
+        
+        # Open vs Solved by Month
         monthly_status = df.groupby(['Month', 'Ticket status']).size().unstack(fill_value=0).reset_index()
         if 'Solved' not in monthly_status.columns:
             monthly_status['Solved'] = 0
@@ -224,6 +227,106 @@ def ticket_overview():
             'solved': monthly_status['Solved'].tolist(),
             'open': monthly_status['Open'].tolist(),
             'hold': monthly_status['Hold'].tolist()
+        }
+        
+        # Backlog Analysis - tickets that remain unsolved from previous months
+        # Sort DataFrame by month to process chronologically
+        df_sorted = df.sort_values('Logged - Date')
+        
+        # Get unique months in sorted order
+        unique_months = df_sorted['Month'].drop_duplicates().tolist()
+        
+        # Initialize backlog tracking
+        backlog_data = {
+            'labels': [],
+            'backlog_count': [],
+            'new_tickets': [],
+            'solved_tickets': [],
+            'priority_breakdown': [],
+            'region_breakdown': []
+        }
+        
+        # Track tickets present in each month
+        current_tickets = set()
+        backlog_tickets = set()
+        
+        for month in unique_months:
+            # Get tickets from this month
+            month_df = df[df['Month'] == month]
+            
+            # New tickets this month
+            new_ticket_ids = set(month_df['Ticket ID'].tolist())
+            new_count = len(new_ticket_ids)
+            
+            # Solved tickets this month
+            solved_month_df = month_df[month_df['Ticket status'] == 'Solved']
+            solved_ticket_ids = set(solved_month_df['Ticket ID'].tolist())
+            solved_count = len(solved_ticket_ids)
+            
+            # Update current tickets
+            current_tickets = current_tickets.union(new_ticket_ids)
+            
+            # Remove solved tickets from tracking
+            current_tickets = current_tickets - solved_ticket_ids
+            
+            # Backlog is anything in current_tickets that wasn't new this month
+            backlog_tickets = current_tickets - new_ticket_ids
+            backlog_count = len(backlog_tickets)
+            
+            # Get backlog tickets from the DataFrame
+            backlog_df = df[df['Ticket ID'].isin(backlog_tickets)]
+            
+            # Get priority breakdown for backlog
+            priority_breakdown = {}
+            if not backlog_df.empty:
+                priority_counts = backlog_df['Priority'].value_counts().to_dict()
+                for priority, count in priority_counts.items():
+                    priority_breakdown[priority] = count
+            
+            # Get region breakdown for backlog
+            region_breakdown = {}
+            if not backlog_df.empty:
+                region_counts = backlog_df['Region'].value_counts().to_dict()
+                for region, count in region_counts.items():
+                    region_breakdown[region] = count
+            
+            # Save data for this month
+            backlog_data['labels'].append(month)
+            backlog_data['backlog_count'].append(backlog_count)
+            backlog_data['new_tickets'].append(new_count)
+            backlog_data['solved_tickets'].append(solved_count)
+            backlog_data['priority_breakdown'].append(priority_breakdown)
+            backlog_data['region_breakdown'].append(region_breakdown)
+        
+        # Calculate current backlog age distribution
+        current_open_tickets = df[(df['Ticket status'] == 'Open') | (df['Ticket status'] == 'Hold')]
+        
+        # Calculate age of tickets in days
+        current_date = pd.Timestamp.today()
+        current_open_tickets['age_days'] = (current_date - current_open_tickets['Logged - Date']).dt.days
+        
+        # Age buckets
+        age_buckets = {
+            '< 30 days': 0,
+            '30-60 days': 0,
+            '60-90 days': 0,
+            '> 90 days': 0
+        }
+        
+        for _, ticket in current_open_tickets.iterrows():
+            age = ticket['age_days']
+            if age < 30:
+                age_buckets['< 30 days'] += 1
+            elif age < 60:
+                age_buckets['30-60 days'] += 1
+            elif age < 90:
+                age_buckets['60-90 days'] += 1
+            else:
+                age_buckets['> 90 days'] += 1
+        
+        backlog_age_data = {
+            'labels': list(age_buckets.keys()),
+            'counts': list(age_buckets.values())
         }
         
         # Open vs Solved by Region
@@ -340,7 +443,9 @@ def ticket_overview():
             'solved_percentage': solved_percentage,
             'open_percentage': open_percentage,
             'hold_percentage': hold_percentage,
-            'within_sla_percentage': within_sla_percentage
+            'within_sla_percentage': within_sla_percentage,
+            'current_backlog': len(current_open_tickets),
+            'oldest_ticket_age': current_open_tickets['age_days'].max() if not current_open_tickets.empty else 0
         }
         
         return render_template(
@@ -352,7 +457,9 @@ def ticket_overview():
             region_data=region_data,
             engineer_data=engineer_data,
             priority_data=priority_data,
-            region_group_data=region_group_data
+            region_group_data=region_group_data,
+            backlog_data=backlog_data,
+            backlog_age_data=backlog_age_data
         )
         
     except Exception as e:
