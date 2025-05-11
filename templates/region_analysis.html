@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Analysis - Region Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .stat-label {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .table-responsive {
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Region Analysis</h1>
+        <p class="text-center lead">File: {{ filename }}</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-warning">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('ticket_overview') }}">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('region_analysis') }}">Region Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('group_analysis') }}">Group Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('engineer_analysis') }}">Engineer Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('priority_analysis') }}">Priority Analysis</a>
+            </li>
+        </ul>
+
+        <!-- Region Analysis -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Average Resolution Time by Region</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    {{ region_avg_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tickets by Region and Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    {{ region_count_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tickets by Region and Priority</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    {{ region_priority_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Upload Another File</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html> 
