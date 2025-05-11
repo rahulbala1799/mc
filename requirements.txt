@@ -1,3 +1,5 @@
 et_xmlfile==2.0.0
+gunicorn==23.0.0
 openpyxl==3.1.5
+packaging==25.0
 XlsxWriter==3.2.3
