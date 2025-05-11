@@ -63,7 +63,7 @@ def calculate_resolution_metrics(df):
     
     # Tickets count
     metrics['total_tickets'] = len(df)
-    metrics['solved_tickets'] = len(solved_tickets)
+    metrics['solved_tickets'] = len(df[df['Ticket status'] == 'Solved'])
     metrics['open_tickets'] = len(df[df['Ticket status'] == 'Open'])
     metrics['hold_tickets'] = len(df[df['Ticket status'] == 'Hold'])
     
