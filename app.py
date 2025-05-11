@@ -39,7 +39,7 @@ def calculate_resolution_metrics(df):
     
     # Overall metrics
     all_tickets_mean = df['Resolution Time (Days)'].mean()
-    solved_tickets = df[df['Ticket status'] == 'Solved']
+    # solved_tickets = df[df['Ticket status'] == 'Solved']
     solved_tickets_mean = solved_tickets['Resolution Time (Days)'].mean()
     
     metrics['all_tickets_avg'] = round(all_tickets_mean, 1) if not pd.isna(all_tickets_mean) else "N/A"
