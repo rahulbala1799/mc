@@ -245,40 +245,171 @@
         </div>
 
         <!-- Main charts section -->
-        <div class="main-charts">
+        <div class="row mb-4">
             <!-- Priority Distribution -->
-            <div class="card chart-card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="bi bi-pie-chart header-icon"></i>Priority Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="overallPriorityChart"></canvas>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-pie-chart header-icon"></i>Priority Distribution</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for priority, count in overall_priority_counts.items() %}
+                                    <tr>
+                                        <td>
+                                            <span class="priority-badge 
+                                                {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}bg-danger
+                                                {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}bg-warning
+                                                {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}bg-success
+                                                {% else %}bg-primary{% endif %}">
+                                                {{ priority }}
+                                            </span>
+                                        </td>
+                                        <td>{{ count }}</td>
+                                        <td>{{ overall_priority_percentages.get(priority, 0) }}%</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px; width: 100%;">
+                                                <div class="progress-bar bg-success" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Solved')].shape[0] / count * 100)|round }}%"></div>
+                                                <div class="progress-bar bg-warning" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Open')].shape[0] / count * 100)|round }}%"></div>
+                                                <div class="progress-bar bg-danger" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Hold')].shape[0] / count * 100)|round }}%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Priority Distribution by Region -->
-            <div class="card chart-card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="bi bi-bar-chart header-icon"></i>By Region</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="priorityByRegionChart"></canvas>
+            <!-- Distribution by Region -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-bar-chart header-icon"></i>Priority by Region</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Region</th>
+                                        <th>Total</th>
+                                        {% for priority in priorities %}
+                                        <th>
+                                            <span class="priority-badge 
+                                                {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}bg-danger
+                                                {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}bg-warning
+                                                {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}bg-success
+                                                {% else %}bg-primary{% endif %}" style="font-size: 0.7rem;">
+                                                {{ priority }}
+                                            </span>
+                                        </th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for region in regions %}
+                                    <tr>
+                                        <td>{{ region }}</td>
+                                        <td>{{ regional_priority_data.get(region, {}).get('total_tickets', 0) }}</td>
+                                        {% for priority in priorities %}
+                                        <td>{{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Resolution Time Chart -->
+        <!-- Resolution Time Table -->
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0"><i class="bi bi-clock header-icon"></i>Resolution Time by Priority (Days)</h5>
             </div>
-            <div class="card-body">
-                <div class="chart-container" style="height: 350px;">
-                    <canvas id="resolutionTimeChart"></canvas>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Priority</th>
+                                {% for region in regions %}
+                                <th>{{ region }}</th>
+                                {% endfor %}
+                                <th>Overall Avg</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for priority in priorities %}
+                            <tr>
+                                <td>
+                                    <span class="priority-badge 
+                                        {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}bg-danger
+                                        {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}bg-warning
+                                        {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}bg-success
+                                        {% else %}bg-primary{% endif %}">
+                                        {{ priority }}
+                                    </span>
+                                </td>
+                                {% for region in regions %}
+                                <td>
+                                    {% set resolution_time = regional_priority_data.get(region, {}).get('resolution_by_priority', {}).get(priority, 'N/A') %}
+                                    {% if resolution_time != 'N/A' %}
+                                        <span class="badge 
+                                            {% if resolution_time < 3 %}bg-success
+                                            {% elif resolution_time < 5 %}bg-info
+                                            {% elif resolution_time < 7 %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ resolution_time }}d
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td>
+                                    {% set total_time = 0 %}
+                                    {% set count = 0 %}
+                                    {% for region in regions %}
+                                        {% set res_time = regional_priority_data.get(region, {}).get('resolution_by_priority', {}).get(priority, 'N/A') %}
+                                        {% if res_time != 'N/A' %}
+                                            {% set total_time = total_time + res_time %}
+                                            {% set count = count + 1 %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if count > 0 %}
+                                        {% set avg_time = (total_time / count)|round(1) %}
+                                        <span class="badge 
+                                            {% if avg_time < 3 %}bg-success
+                                            {% elif avg_time < 5 %}bg-info
+                                            {% elif avg_time < 7 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" style="font-size: 0.9rem; font-weight: bold;">
+                                            {{ avg_time }}d
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -426,113 +557,6 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Overall Priority Chart
-        const overallPriorityCtx = document.getElementById('overallPriorityChart').getContext('2d');
-        const priorityLabels = [];
-        const priorityCounts = [];
-        const priorityColors = [];
-
-        {% for priority, count in overall_priority_counts.items() %}
-        priorityLabels.push("{{ priority }}");
-        priorityCounts.push({{ count }});
-        {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}
-            priorityColors.push('rgba(220, 53, 69, 0.7)');
-        {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}
-            priorityColors.push('rgba(255, 193, 7, 0.7)');
-        {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}
-            priorityColors.push('rgba(25, 135, 84, 0.7)');
-        {% else %}
-            priorityColors.push('rgba(13, 110, 253, 0.7)');
-        {% endif %}
-        {% endfor %}
-
-        new Chart(overallPriorityCtx, {
-            type: 'pie',
-            data: {
-                labels: priorityLabels,
-                datasets: [{
-                    data: priorityCounts,
-                    backgroundColor: priorityColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 12
-                        }
-                    }
-                }
-            }
-        });
-
-        // Priority by Region Chart
-        const priorityByRegionCtx = document.getElementById('priorityByRegionChart').getContext('2d');
-        const priorityComparisonData = {{ priority_comparison_data|tojson }};
-
-        new Chart(priorityByRegionCtx, {
-            type: 'bar',
-            data: priorityComparisonData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Tickets'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                }
-            }
-        });
-
-        // Resolution Time Chart
-        const resolutionTimeCtx = document.getElementById('resolutionTimeChart').getContext('2d');
-        const resolutionComparisonData = {{ resolution_comparison_data|tojson }};
-
-        new Chart(resolutionTimeCtx, {
-            type: 'line',
-            data: resolutionComparisonData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Average Resolution Time (Days)'
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                }
-            }
-        });
-
         // Individual Region Priority Charts
         {% for region in regions %}
         {% if regional_priority_data.get(region, {}).get('total_tickets', 0) > 0 %}
