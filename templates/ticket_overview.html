@@ -162,7 +162,7 @@
             </div>
             <div class="col-md-3">
                 <div class="card stat-card">
-                    <div class="stat-value text-success">{{ metrics.solved_tickets }}</div>
+                    <div class="stat-value text-success">{{ metrics.total_tickets - metrics.open_tickets - metrics.hold_tickets }}</div>
                     <div class="stat-label">Solved Tickets</div>
                     <div class="mt-2">
                         <span class="ratio-indicator {% if metrics.solved_percentage > 75 %}ratio-good{% elif metrics.solved_percentage > 50 %}ratio-medium{% else %}ratio-bad{% endif %}">

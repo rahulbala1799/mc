@@ -497,7 +497,6 @@ def ticket_overview():
             'by_engineer': engineer_metrics.round(1).to_dict(),
             'by_priority': priority_metrics.round(1).to_dict(),
             'total_tickets': total_tickets,
-            'solved_tickets': solved_count,
             'open_tickets': open_count,
             'hold_tickets': hold_count,
             'solved_percentage': solved_percentage,
