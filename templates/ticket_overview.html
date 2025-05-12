@@ -240,10 +240,10 @@
                             <div class="col-md-3">
                                 <div class="card stat-card">
                                     <div class="stat-value text-warning">{{ metrics.oldest_ticket_age }}</div>
-                                    <div class="stat-label">Oldest Ticket (days)</div>
+                                    <div class="stat-label">Oldest Open Ticket (days)</div>
                                     <div class="mt-2">
                                         <span class="ratio-indicator {% if metrics.oldest_ticket_age < 30 %}ratio-good{% elif metrics.oldest_ticket_age < 90 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                                            Age of oldest open ticket
+                                            {{ metrics.oldest_ticket_age }} days without resolution
                                         </span>
                                     </div>
                                 </div>
