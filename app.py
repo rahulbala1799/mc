@@ -1510,14 +1510,17 @@ def priority_analysis():
         
         # Calculate detailed priority metrics
         priority_metrics = {}
+        # Updated SLA thresholds (days) by normalized priority
         sla_thresholds = {
-            # Default SLA thresholds (days) by priority 
-            # These would ideally come from configuration
-            'No Priority': 7,  # Default for unspecified priority
-            'High': 1,  # 1 day for high priority
-            'Medium': 3,  # 3 days for medium priority
-            'Low': 7   # 7 days for low priority
+            'normal': 10,
+            'low': 20,
+            'urgent': 1,
+            'high': 2,
+            'no priority': 7  # fallback
         }
+        
+        def normalize_priority(priority):
+            return str(priority).strip().lower().replace('_', '').replace('-', '').replace(' ', '')
         
         for priority in all_priorities:
             # Get tickets for this priority
@@ -1534,16 +1537,17 @@ def priority_analysis():
             avg_resolution_time = round(priority_solved['Resolution Time (Days)'].mean(), 1) if len(priority_solved) > 0 else None
             
             # Determine SLA threshold for this priority
-            # Look for keywords in priority name to match to an SLA
-            priority_lower = priority.lower()
-            if 'high' in priority_lower or 'urgent' in priority_lower or 'critical' in priority_lower or '1' in priority_lower:
-                sla_threshold = sla_thresholds.get('High', 1)
-            elif 'medium' in priority_lower or 'normal' in priority_lower or '2' in priority_lower:
-                sla_threshold = sla_thresholds.get('Medium', 3)
-            elif 'low' in priority_lower or '3' in priority_lower:
-                sla_threshold = sla_thresholds.get('Low', 7)
+            norm_priority = normalize_priority(priority)
+            if 'urgent' in norm_priority:
+                sla_threshold = sla_thresholds['urgent']
+            elif 'high' in norm_priority:
+                sla_threshold = sla_thresholds['high']
+            elif 'normal' in norm_priority:
+                sla_threshold = sla_thresholds['normal']
+            elif 'low' in norm_priority:
+                sla_threshold = sla_thresholds['low']
             else:
-                sla_threshold = sla_thresholds.get('No Priority', 7)
+                sla_threshold = sla_thresholds['no priority']
             
             # Calculate SLA compliance
             if len(priority_solved) > 0:
