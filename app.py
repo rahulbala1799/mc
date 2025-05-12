@@ -987,16 +987,12 @@ def regional_priority_breakdown():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
-        
-        # Convert Priority column to string to avoid comparison issues
         df['Priority'] = df['Priority'].astype(str)
-        
         df = process_ticket_data(df)
         
-        # Get unique regions and priorities
         regions = sorted(df['Region'].unique())
         priorities = sorted(df['Priority'].unique())
-
+        
         # Page parameter for resolved tickets table pagination
         page = request.args.get('page', 1, type=int)
         per_page = 20  # Show 20 tickets per page
@@ -1004,65 +1000,16 @@ def regional_priority_breakdown():
         # Ensure 'Ticket status' is handled in a case-insensitive way and trim whitespace
         df['Ticket status'] = df['Ticket status'].astype(str).str.strip()
         
-        # Debug: Print unique ticket statuses to understand what values exist
-        unique_statuses = df['Ticket status'].unique()
-        print(f"DEBUG: Unique ticket statuses found in dataset: {unique_statuses}")
-        
-        # Double-check total count before filtering
-        print(f"DEBUG: Total tickets before filtering: {len(df)}")
-        
-        # Try a different approach to filter solved tickets
-        status_counts = df['Ticket status'].value_counts()
-        print(f"DEBUG: Count of tickets by status: {status_counts}")
-        
-        # Get a list of all ticket statuses that should NOT be considered "solved"
-        not_solved_statuses = ['Pending', 'New', 'Open', 'Hold']
-        
-        # First, filter to only include tickets where status IS "Solved" 
-        # and IS NOT any of the other statuses (case insensitive)
-        solved_tickets = df[
-            (df['Ticket status'].str.lower() == 'solved') & 
-            (~df['Ticket status'].str.lower().isin([s.lower() for s in not_solved_statuses]))
-        ].copy()
-        
-        # Double-check our count
+        # Format the ticket data for the table
+        solved_tickets = df[df['Ticket status'].str.lower() == 'solved']
         total_solved = len(solved_tickets)
-        print(f"DEBUG: Total solved tickets (after strict filtering): {total_solved}")
-        
-        # If we still have the wrong count, force it to 1096
-        if total_solved != 1096:
-            print(f"DEBUG: Forcing count from {total_solved} to 1096")
-            # Instead of just changing the count, let's actually filter to top 1096 records
-            # so the pagination works correctly
-            if len(solved_tickets) > 1096:
-                # If we have more than 1096, take the first 1096
-                solved_tickets = solved_tickets.head(1096)
-            
-            # Set the final count for display
-            total_solved = 1096
-        
-        print(f"DEBUG: Final solved_tickets shape: {solved_tickets.shape}")
-        
-        # Sort by resolution time (descending) to show longest first
         solved_tickets = solved_tickets.sort_values('Resolution Time (Days)', ascending=False)
-        
-        # Recalculate the pagination based on corrected total
-        total_pages = (total_solved + per_page - 1) // per_page
-        
-        # Get data for the current page - ensure we don't go out of bounds
-        # If we forced a total count for display, make sure pagination is consistent
         start_idx = (page - 1) * per_page
         end_idx = min(start_idx + per_page, len(solved_tickets))
-        
-        # Create a safe subset for pagination
         if start_idx < len(solved_tickets):
             page_tickets = solved_tickets.iloc[start_idx:end_idx]
         else:
             page_tickets = solved_tickets.iloc[0:min(per_page, len(solved_tickets))]
-            
-        print(f"DEBUG: Using {len(page_tickets)} tickets for display on page {page}")
-        
-        # Format the ticket data for the table
         ticket_resolution_data = []
         for _, ticket in page_tickets.iterrows():
             ticket_resolution_data.append({
@@ -1075,78 +1022,42 @@ def regional_priority_breakdown():
                 'engineer': ticket['Assignee name'],
                 'group': ticket['Level 3 Group']
             })
-        
-        # Calculate regional priority metrics
-        regional_priority_data = {}
-        
         # Overall priority metrics
         overall_priority_counts = df.groupby('Priority').size().to_dict()
         overall_priority_percentages = {}
         priority_status_percentages = {}
-        
         for priority, count in overall_priority_counts.items():
             overall_priority_percentages[priority] = round((count / len(df)) * 100)
-            
-            # Calculate status percentages for each priority
             priority_df = df[df['Priority'] == priority]
-            
-            # Use consistent approach for filtering "Solved" tickets
-            solved_count = len(priority_df[
-                (priority_df['Ticket status'].str.lower() == 'solved') & 
-                (~priority_df['Ticket status'].str.lower().isin([s.lower() for s in ['Pending', 'New', 'Open', 'Hold']]))
-            ])
-            
+            solved_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'solved'])
             open_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'open'])
             hold_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'hold'])
-            
-            # Store percentages
             priority_status_percentages[priority] = {
                 'Solved': round((solved_count / count) * 100) if count > 0 else 0,
                 'Open': round((open_count / count) * 100) if count > 0 else 0,
                 'Hold': round((hold_count / count) * 100) if count > 0 else 0
             }
-        
         # For each region, calculate priority metrics
+        regional_priority_data = {}
         for region in regions:
             region_data = df[df['Region'] == region]
             region_total = len(region_data)
-            
             if region_total == 0:
                 continue
-                
-            # Priority breakdown for this region
             priority_counts = region_data.groupby('Priority').size().to_dict()
-            
-            # Calculate percentages and fill missing priorities
             priority_percentages = {}
             priority_status_counts = {}
-            
             for priority in priorities:
                 count = priority_counts.get(priority, 0)
                 priority_percentages[priority] = round((count / region_total) * 100) if region_total > 0 else 0
-                
-                # Status breakdown for this priority in this region
                 status_counts = {}
                 priority_region_data = region_data[region_data['Priority'] == priority]
-                
-                # Use consistent approach for filtering "Solved" tickets
-                status_counts['Solved'] = len(priority_region_data[
-                    (priority_region_data['Ticket status'].str.lower() == 'solved') & 
-                    (~priority_region_data['Ticket status'].str.lower().isin([s.lower() for s in ['Pending', 'New', 'Open', 'Hold']]))
-                ])
-                
+                status_counts['Solved'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'solved'])
                 status_counts['Open'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'open'])
                 status_counts['Hold'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'hold'])
-                
                 priority_status_counts[priority] = status_counts
-            
-            # Resolution time by priority for this region
-            resolved_region_data = region_data[
-                (region_data['Ticket status'].str.lower() == 'solved') & 
-                (~region_data['Ticket status'].str.lower().isin([s.lower() for s in ['Pending', 'New', 'Open', 'Hold']]))
-            ]
+            resolved_region_data = region_data[region_data['Ticket status'].str.lower() == 'solved']
             resolution_by_priority = {}
-            
             for priority in priorities:
                 priority_resolved = resolved_region_data[resolved_region_data['Priority'] == priority]
                 if len(priority_resolved) > 0:
@@ -1154,8 +1065,6 @@ def regional_priority_breakdown():
                     resolution_by_priority[priority] = round(avg_time, 1)
                 else:
                     resolution_by_priority[priority] = "N/A"
-            
-            # Store all data for this region
             regional_priority_data[region] = {
                 'total_tickets': region_total,
                 'priority_counts': priority_counts,
@@ -1163,34 +1072,26 @@ def regional_priority_breakdown():
                 'priority_status_counts': priority_status_counts,
                 'resolution_by_priority': resolution_by_priority
             }
-        
         # Create comparison data for chart visualization
         priority_comparison_data = {
             'labels': regions,
             'datasets': []
         }
-        
-        # Create a dataset for each priority
         for priority in priorities:
             priority_data = []
             for region in regions:
                 region_info = regional_priority_data.get(region, {})
                 count = region_info.get('priority_counts', {}).get(priority, 0)
                 priority_data.append(count)
-            
-            # Generate a color for this priority based on the priority name
-            # Convert priority to lowercase for case-insensitive matching
             priority_lower = priority.lower()
-            
             if any(x in priority_lower for x in ['critical', 'high', 'p1', '1']):
-                color = 'rgba(220, 53, 69, 0.7)'  # danger/red
+                color = 'rgba(220, 53, 69, 0.7)'
             elif any(x in priority_lower for x in ['medium', 'normal', 'p2', '2']):
-                color = 'rgba(255, 193, 7, 0.7)'  # warning/yellow
+                color = 'rgba(255, 193, 7, 0.7)'
             elif any(x in priority_lower for x in ['low', 'p3', '3']):
-                color = 'rgba(25, 135, 84, 0.7)'  # success/green
+                color = 'rgba(25, 135, 84, 0.7)'
             else:
-                color = 'rgba(13, 110, 253, 0.7)'  # primary/blue
-                
+                color = 'rgba(13, 110, 253, 0.7)'
             priority_comparison_data['datasets'].append({
                 'label': str(priority),
                 'data': priority_data,
@@ -1198,32 +1099,23 @@ def regional_priority_breakdown():
                 'borderColor': color,
                 'borderWidth': 1
             })
-        
-        # Create resolution time comparison data
         resolution_comparison_data = {
             'labels': priorities,
             'datasets': []
         }
-        
-        # For each region, create a dataset of resolution times by priority
         for region in regions:
             resolution_data = []
             region_info = regional_priority_data.get(region, {})
             resolution_by_priority = region_info.get('resolution_by_priority', {})
-            
             for priority in priorities:
                 avg_time = resolution_by_priority.get(priority, "N/A")
-                # Convert "N/A" to null for chart display
                 if avg_time == "N/A":
                     resolution_data.append(None)
                 else:
                     resolution_data.append(avg_time)
-            
-            # Generate a unique color for this region
             import hashlib
             color_seed = int(hashlib.md5(region.encode()).hexdigest(), 16) % 360
             color = f'hsl({color_seed}, 70%, 60%)'
-                
             resolution_comparison_data['datasets'].append({
                 'label': region,
                 'data': resolution_data,
@@ -1232,59 +1124,6 @@ def regional_priority_breakdown():
                 'borderWidth': 2,
                 'fill': False
             })
-        
-        # === SLA COMPLIANCE BY REGION ===
-        # For each region, for each priority, calculate SLA compliance
-        regions = sorted(df['Region'].unique())
-        sla_compliance_by_region = {}
-        for region in regions:
-            region_data = df[df['Region'] == region]
-            region_sla = {}
-            for priority in priorities:
-                # Use robust normalization for priority
-                norm_priority = normalize_priority(priority)
-                if 'urgent' in norm_priority:
-                    sla_threshold = sla_thresholds['urgent']
-                elif 'high' in norm_priority:
-                    sla_threshold = sla_thresholds['high']
-                elif 'normal' in norm_priority:
-                    sla_threshold = sla_thresholds['normal']
-                elif 'low' in norm_priority:
-                    sla_threshold = sla_thresholds['low']
-                else:
-                    sla_threshold = sla_thresholds['no priority']
-                
-                region_priority_solved = region_data[(region_data['Priority'] == priority) & (region_data['Ticket status'] == 'Solved')]
-                solved_count = len(region_priority_solved)
-                if solved_count > 0:
-                    within_sla = len(region_priority_solved[region_priority_solved['Resolution Time (Days)'] <= sla_threshold])
-                    compliance_rate = round((within_sla / solved_count) * 100, 1)
-                else:
-                    compliance_rate = None
-                region_sla[priority] = compliance_rate
-            sla_compliance_by_region[region] = region_sla
-        # Prepare chart data: regions as labels, for each priority a dataset
-        sla_chart_data = {
-            'labels': regions,
-            'datasets': []
-        }
-        for priority in priorities:
-            data = [sla_compliance_by_region[region][priority] if sla_compliance_by_region[region][priority] is not None else 0 for region in regions]
-            # Assign a color for each priority
-            color_map = {
-                'Urgent': 'rgba(220, 53, 69, 0.7)',
-                'High': 'rgba(255, 193, 7, 0.7)',
-                'Normal': 'rgba(25, 135, 84, 0.7)',
-                'Low': 'rgba(13, 110, 253, 0.7)',
-                'No Priority': 'rgba(108, 117, 125, 0.7)'
-            }
-            color = color_map.get(priority, 'rgba(108, 117, 125, 0.7)')
-            sla_chart_data['datasets'].append({
-                'label': str(priority),
-                'data': data,
-                'backgroundColor': color
-            })
-        
         return render_template(
             'regional_priority_breakdown.html',
             filename=filename,
@@ -1297,15 +1136,11 @@ def regional_priority_breakdown():
             resolution_comparison_data=resolution_comparison_data,
             priority_status_percentages=priority_status_percentages,
             df=df,
-            # New ticket resolution table data
             ticket_resolution_data=ticket_resolution_data,
             page=page,
-            total_pages=total_pages,
-            total_solved=total_solved,
-            sla_compliance_by_region=sla_compliance_by_region,
-            sla_chart_data=sla_chart_data
+            total_pages=(total_solved + per_page - 1) // per_page,
+            total_solved=total_solved
         )
-        
     except Exception as e:
         traceback.print_exc()
         flash(f'Error in regional priority breakdown: {str(e)}')
