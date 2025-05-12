@@ -1469,6 +1469,12 @@ def priority_analysis():
         
         # Priority analysis
         solved_tickets = df[df['Ticket status'] == 'Solved']
+        open_tickets = df[df['Ticket status'] == 'Open']
+        
+        # Get unique priorities and sort them
+        all_priorities = sorted(df['Priority'].unique())
+        
+        # === PERFORMANCE METRICS ===
         
         # Average resolution time by priority
         priority_avg = solved_tickets.groupby('Priority')['Resolution Time (Days)'].mean().sort_values()
@@ -1477,6 +1483,14 @@ def priority_analysis():
             index=False,
             columns=['Priority', 'Resolution Time (Days)'],
             header=['Priority', 'Avg. Resolution Time (Days)']
+        )
+        
+        # Calculate resolution time statistics by priority
+        resolution_stats = solved_tickets.groupby('Priority')['Resolution Time (Days)'].agg(['count', 'mean', 'median', 'min', 'max']).reset_index()
+        resolution_stats.columns = ['Priority', 'Tickets', 'Average', 'Median', 'Minimum', 'Maximum']
+        resolution_stats_html = resolution_stats.round(1).to_html(
+            classes='table table-striped table-hover',
+            index=False
         )
         
         # Ticket count by priority
@@ -1494,9 +1508,121 @@ def priority_analysis():
             index=False
         )
         
+        # Calculate detailed priority metrics
+        priority_metrics = {}
+        sla_thresholds = {
+            # Default SLA thresholds (days) by priority 
+            # These would ideally come from configuration
+            'No Priority': 7,  # Default for unspecified priority
+            'High': 1,  # 1 day for high priority
+            'Medium': 3,  # 3 days for medium priority
+            'Low': 7   # 7 days for low priority
+        }
+        
+        for priority in all_priorities:
+            # Get tickets for this priority
+            priority_tickets = df[df['Priority'] == priority]
+            priority_solved = solved_tickets[solved_tickets['Priority'] == priority]
+            priority_open = open_tickets[open_tickets['Priority'] == priority]
+            
+            # Basic counts
+            total_count = len(priority_tickets)
+            solved_count = len(priority_solved)
+            open_count = len(priority_open)
+            
+            # Calculate metrics
+            avg_resolution_time = round(priority_solved['Resolution Time (Days)'].mean(), 1) if len(priority_solved) > 0 else None
+            
+            # Determine SLA threshold for this priority
+            # Look for keywords in priority name to match to an SLA
+            priority_lower = priority.lower()
+            if 'high' in priority_lower or 'urgent' in priority_lower or 'critical' in priority_lower or '1' in priority_lower:
+                sla_threshold = sla_thresholds.get('High', 1)
+            elif 'medium' in priority_lower or 'normal' in priority_lower or '2' in priority_lower:
+                sla_threshold = sla_thresholds.get('Medium', 3)
+            elif 'low' in priority_lower or '3' in priority_lower:
+                sla_threshold = sla_thresholds.get('Low', 7)
+            else:
+                sla_threshold = sla_thresholds.get('No Priority', 7)
+            
+            # Calculate SLA compliance
+            if len(priority_solved) > 0:
+                within_sla = len(priority_solved[priority_solved['Resolution Time (Days)'] <= sla_threshold])
+                sla_compliance_rate = round((within_sla / solved_count) * 100, 1) if solved_count > 0 else 0
+            else:
+                within_sla = 0
+                sla_compliance_rate = 0
+            
+            # Calculate regional distribution
+            region_distribution = {}
+            for region in priority_tickets['Region'].unique():
+                region_count = len(priority_tickets[priority_tickets['Region'] == region])
+                region_distribution[region] = region_count
+            
+            # Calculate group distribution
+            group_distribution = {}
+            for group in priority_tickets['Level 3 Group'].unique():
+                group_count = len(priority_tickets[priority_tickets['Level 3 Group'] == group])
+                group_distribution[group] = group_count
+            
+            # Calculate engineer distribution
+            engineer_distribution = {}
+            for engineer in priority_tickets['Assignee name'].unique():
+                engineer_count = len(priority_tickets[priority_tickets['Assignee name'] == engineer])
+                engineer_distribution[engineer] = engineer_count
+            
+            # Store all metrics for this priority
+            priority_metrics[priority] = {
+                'total_tickets': total_count,
+                'solved_tickets': solved_count,
+                'open_tickets': open_count,
+                'avg_resolution_time': avg_resolution_time,
+                'sla_threshold': sla_threshold,
+                'within_sla': within_sla,
+                'sla_compliance_rate': sla_compliance_rate,
+                'region_distribution': region_distribution,
+                'group_distribution': group_distribution,
+                'engineer_distribution': engineer_distribution
+            }
+        
+        # Sort priorities by total ticket count
+        sorted_priorities = sorted(priority_metrics.items(), key=lambda x: x[1]['total_tickets'], reverse=True)
+        
+        # === SLA PERFORMANCE METRICS ===
+        
+        # Calculate SLA compliance by priority
+        sla_data = []
+        for priority, metrics in sorted_priorities:
+            if metrics['solved_tickets'] > 0:
+                sla_data.append({
+                    'priority': priority,
+                    'total': metrics['solved_tickets'],
+                    'within_sla': metrics['within_sla'],
+                    'compliance_rate': metrics['sla_compliance_rate'],
+                    'avg_time': metrics['avg_resolution_time'] if metrics['avg_resolution_time'] is not None else 'N/A',
+                    'threshold': metrics['sla_threshold']
+                })
+        
+        # === DISTRIBUTION METRICS ===
+        
         # Priority distribution by region
         priority_region = df.groupby(['Priority', 'Region']).size().unstack(fill_value=0)
         priority_region_html = priority_region.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Priority distribution by group
+        priority_group = df.groupby(['Priority', 'Level 3 Group']).size().unstack(fill_value=0)
+        priority_group_html = priority_group.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Priority distribution by engineer - top engineers only
+        top_engineers = df['Assignee name'].value_counts().head(10).index.tolist()
+        priority_engineer = df[df['Assignee name'].isin(top_engineers)].groupby(['Priority', 'Assignee name']).size().unstack(fill_value=0)
+        priority_engineer_html = priority_engineer.reset_index().to_html(
             classes='table table-striped table-hover',
             index=False
         )
@@ -1507,7 +1633,13 @@ def priority_analysis():
             priority_avg_html=priority_avg_html,
             priority_count_html=priority_count_html,
             priority_region_html=priority_region_html,
-            priorities=sorted(df['Priority'].unique())
+            priority_group_html=priority_group_html,
+            priority_engineer_html=priority_engineer_html,
+            resolution_stats_html=resolution_stats_html,
+            priorities=all_priorities,
+            priority_metrics=priority_metrics,
+            sorted_priorities=sorted_priorities,
+            sla_data=sla_data
         )
         
     except Exception as e:
