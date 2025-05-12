@@ -102,7 +102,7 @@
 
         {% set jira_id_col = None %}
         {% for col in columns %}
-            {% if col|lower|replace(' ', '') == 'jiraid' %}
+            {% if col|lower|replace(' ', '') in ['jiraid', 'jira_id', 'jira-id', 'jira'] %}
                 {% set jira_id_col = col %}
             {% endif %}
         {% endfor %}

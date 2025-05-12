@@ -1955,13 +1955,20 @@ def jira_id_analysis():
         df = pd.read_excel(filepath)
         df = process_ticket_data(df)
 
-        # Ensure JIRA ID column exists
-        if 'JIRA ID' not in df.columns:
+        # Check for JIRA ID column with different possible names
+        jira_id_column = None
+        possible_names = ['JIRA ID', 'JIRAID', 'JIRA_ID', 'JIRA-ID', 'JIRA']
+        for col in df.columns:
+            if col.upper().replace(' ', '') in [name.upper().replace(' ', '') for name in possible_names]:
+                jira_id_column = col
+                break
+
+        if not jira_id_column:
             flash('No JIRA ID column found in the uploaded file.')
-            return redirect(url_for('analyze'))
+            return redirect(url_for('ticket_overview'))
 
         # Clean up JIRA ID column
-        df['JIRA ID'] = df['JIRA ID'].astype(str).str.strip()
+        df['JIRA ID'] = df[jira_id_column].astype(str).str.strip()
         has_jira = df['JIRA ID'].str.lower() != 'no jira id'
         no_jira = ~has_jira
 
@@ -2024,9 +2031,10 @@ def jira_id_analysis():
             preview_no_jira=preview_no_jira
         )
     except Exception as e:
-        traceback.print_exc()
+        print(f"Error in JIRA ID analysis: {str(e)}")  # Added logging
+        traceback.print_exc()  # Print full traceback
         flash(f'Error in JIRA ID analysis: {str(e)}')
-        return redirect(url_for('analyze'))
+        return redirect(url_for('ticket_overview'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
