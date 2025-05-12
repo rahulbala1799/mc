@@ -823,6 +823,39 @@ def regional_priority_breakdown():
         # Get unique regions and priorities
         regions = sorted(df['Region'].unique())
         priorities = sorted(df['Priority'].unique())
+
+        # Page parameter for resolved tickets table pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = 20  # Show 20 tickets per page
+        
+        # Prepare detailed resolved tickets data for the table
+        solved_tickets = df[df['Ticket status'] == 'Solved'].copy()
+        total_solved = len(solved_tickets)
+        
+        # Sort by resolution time (descending) to show longest first
+        solved_tickets = solved_tickets.sort_values('Resolution Time (Days)', ascending=False)
+        
+        # Get data for the current page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        page_tickets = solved_tickets.iloc[start_idx:min(end_idx, total_solved)]
+        
+        # Format the ticket data for the table
+        ticket_resolution_data = []
+        for _, ticket in page_tickets.iterrows():
+            ticket_resolution_data.append({
+                'ticket_id': ticket['Ticket ID'],
+                'region': ticket['Region'],
+                'priority': ticket['Priority'],
+                'logged_date': ticket['Logged - Date'].strftime('%Y-%m-%d') if pd.notna(ticket['Logged - Date']) else 'N/A',
+                'solved_date': ticket['Ticket solved - Date'].strftime('%Y-%m-%d') if pd.notna(ticket['Ticket solved - Date']) else 'N/A',
+                'resolution_days': round(ticket['Resolution Time (Days)'], 1) if pd.notna(ticket['Resolution Time (Days)']) else 'N/A',
+                'engineer': ticket['Assignee name'],
+                'group': ticket['Level 3 Group']
+            })
+        
+        # Calculate total pages for pagination
+        total_pages = (total_solved + per_page - 1) // per_page
         
         # Calculate regional priority metrics
         regional_priority_data = {}
@@ -978,7 +1011,12 @@ def regional_priority_breakdown():
             priority_comparison_data=priority_comparison_data,
             resolution_comparison_data=resolution_comparison_data,
             priority_status_percentages=priority_status_percentages,
-            df=df
+            df=df,
+            # New ticket resolution table data
+            ticket_resolution_data=ticket_resolution_data,
+            page=page,
+            total_pages=total_pages,
+            total_solved=total_solved
         )
         
     except Exception as e:

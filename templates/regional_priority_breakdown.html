@@ -553,6 +553,91 @@
         <div class="text-center mb-4">
             <a href="{{ url_for('region_analysis') }}" class="btn btn-primary">Back to Region Analysis</a>
         </div>
+
+        <!-- Ticket Resolution Details Table -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-list-ul header-icon"></i>Detailed Ticket Resolution Times</h5>
+                <span class="badge bg-primary">{{ total_solved }} Solved Tickets</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Region</th>
+                                <th>Priority</th>
+                                <th>Logged Date</th>
+                                <th>Solved Date</th>
+                                <th>Resolution (Days)</th>
+                                <th>Engineer</th>
+                                <th>Group</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in ticket_resolution_data %}
+                            <tr>
+                                <td>{{ ticket.ticket_id }}</td>
+                                <td>{{ ticket.region }}</td>
+                                <td>
+                                    <span class="priority-badge 
+                                        {% if 'critical' in ticket.priority|lower or 'high' in ticket.priority|lower or 'p1' in ticket.priority|lower or ticket.priority == '1' %}bg-danger
+                                        {% elif 'medium' in ticket.priority|lower or 'normal' in ticket.priority|lower or 'p2' in ticket.priority|lower or ticket.priority == '2' %}bg-warning
+                                        {% elif 'low' in ticket.priority|lower or 'p3' in ticket.priority|lower or ticket.priority == '3' %}bg-success
+                                        {% else %}bg-primary{% endif %}">
+                                        {{ ticket.priority }}
+                                    </span>
+                                </td>
+                                <td>{{ ticket.logged_date }}</td>
+                                <td>{{ ticket.solved_date }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if ticket.resolution_days != 'N/A' %}
+                                            {% if ticket.resolution_days < 3 %}bg-success
+                                            {% elif ticket.resolution_days < 5 %}bg-info
+                                            {% elif ticket.resolution_days < 7 %}bg-warning
+                                            {% else %}bg-danger{% endif %}
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ ticket.resolution_days }}{% if ticket.resolution_days != 'N/A' %}d{% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ ticket.engineer }}</td>
+                                <td>{{ ticket.group }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <div class="d-flex justify-content-center my-3">
+                    <nav aria-label="Ticket resolution pagination">
+                        <ul class="pagination">
+                            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('regional_priority_breakdown', page=page-1) if page > 1 else '#' }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            
+                            {% for p in range(max(1, page-2), min(total_pages+1, page+3)) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('regional_priority_breakdown', page=p) }}">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('regional_priority_breakdown', page=page+1) if page < total_pages else '#' }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <script>
