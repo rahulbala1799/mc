@@ -322,6 +322,46 @@
             </div>
         </div>
 
+        <!-- SLA Compliance by Region (NEW) -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-geo-alt me-2"></i>SLA Compliance by Region</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Region</th>
+                                {% for priority in all_priorities %}
+                                <th>{{ priority }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region, region_data in sla_by_region.items() %}
+                            <tr>
+                                <td class="fw-bold">{{ region }}</td>
+                                {% for priority in all_priorities %}
+                                {% set val = region_data[priority] %}
+                                <td>
+                                    {% if val is not none %}
+                                        <span class="badge {% if val >= 90 %}bg-success{% elif val >= 75 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ val }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Resolution Time Stats -->
         <div class="card mb-4">
             <div class="card-header">
