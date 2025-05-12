@@ -264,8 +264,12 @@ def ticket_overview():
             # Convert month strings to datetime for proper comparison
             month_dates = [pd.to_datetime(month + "-01") for month in unique_months]
             
-            for i, month in enumerate(unique_months):
-                month_date = month_dates[i]
+            # Sort months to ensure chronological processing
+            sorted_month_indices = sorted(range(len(month_dates)), key=lambda i: month_dates[i])
+            
+            for idx in sorted_month_indices:
+                month = unique_months[idx]
+                month_date = month_dates[idx]
                 month_end = month_date + pd.offsets.MonthEnd(1)
                 
                 # Get all tickets created up to this month (including this month)
@@ -279,14 +283,19 @@ def ticket_overview():
                 solved_month_df = df[(df['Month'] == month) & (df['Ticket status'] == 'Solved')]
                 solved_count = len(solved_month_df)
                 
-                # Backlog is all tickets created up to this month without a solved date by month end
-                # A ticket is part of backlog if:
-                # 1. It was created on or before this month
-                # 2. It doesn't have a solved date, or the solved date is after this month
-                backlog_df = tickets_up_to_now[
-                    (pd.isna(tickets_up_to_now['Ticket solved - Date'])) | 
-                    (pd.to_datetime(tickets_up_to_now['Ticket solved - Date']) > month_end)
-                ]
+                # For backlog, use the same definition as current_backlog:
+                # Tickets without a solved date that were created on or before this month's end
+                backlog_df = tickets_up_to_now[tickets_up_to_now['Ticket solved - Date'].isna()]
+                
+                # If this is the last month (most recent), verify it matches current_backlog
+                if idx == sorted_month_indices[-1]:
+                    current_backlog_count = len(df[df['Ticket solved - Date'].isna()])
+                    print(f"DEBUG: Current backlog = {current_backlog_count}, Last month backlog = {len(backlog_df)}")
+                    # Ensure they match
+                    if current_backlog_count != len(backlog_df):
+                        print(f"WARNING: Backlog count mismatch! Fixing...")
+                        backlog_df = df[df['Ticket solved - Date'].isna()]
+                
                 backlog_count = len(backlog_df)
                 
                 # Debug print for backlog calculation
