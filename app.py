@@ -191,6 +191,7 @@ def ticket_overview():
         total_tickets = len(df)
         # solved_count = len(solved_tickets)
         solved_count = len(df[df['Ticket status'] == 'Solved'])
+        print(f"DEBUG: Total solved tickets: {solved_count}")
         open_count = len(df[df['Ticket status'] == 'Open'])
         hold_count = len(df[df['Ticket status'] == 'Hold'])
         
@@ -223,6 +224,9 @@ def ticket_overview():
             monthly_status['Open'] = 0
         if 'Hold' not in monthly_status.columns:
             monthly_status['Hold'] = 0
+            
+        # Debug to verify monthly status calculation
+        print(f"DEBUG: Sum of monthly solved tickets: {monthly_status['Solved'].sum()}")
             
         monthly_data = {
             'labels': monthly_status['Month'].tolist(),
