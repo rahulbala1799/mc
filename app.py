@@ -1942,6 +1942,92 @@ def download_priority_excel():
         flash(f'Error generating Excel file: {str(e)}')
         return redirect(url_for('priority_analysis'))
 
+@app.route('/jira_id_analysis')
+def jira_id_analysis():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+
+    try:
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+
+        # Ensure JIRA ID column exists
+        if 'JIRA ID' not in df.columns:
+            flash('No JIRA ID column found in the uploaded file.')
+            return redirect(url_for('analyze'))
+
+        # Clean up JIRA ID column
+        df['JIRA ID'] = df['JIRA ID'].astype(str).str.strip()
+        has_jira = df['JIRA ID'].str.lower() != 'no jira id'
+        no_jira = ~has_jira
+
+        total_tickets = len(df)
+        with_jira_count = has_jira.sum()
+        no_jira_count = no_jira.sum()
+        with_jira_pct = round((with_jira_count / total_tickets) * 100, 1) if total_tickets > 0 else 0
+        no_jira_pct = round((no_jira_count / total_tickets) * 100, 1) if total_tickets > 0 else 0
+
+        # By priority
+        priorities = sorted(df['Priority'].unique())
+        priority_jira_stats = []
+        for priority in priorities:
+            subset = df[df['Priority'] == priority]
+            count = len(subset)
+            with_jira = (subset['JIRA ID'].str.lower() != 'no jira id').sum()
+            no_jira = (subset['JIRA ID'].str.lower() == 'no jira id').sum()
+            with_jira_pct = round((with_jira / count) * 100, 1) if count > 0 else 0
+            no_jira_pct = round((no_jira / count) * 100, 1) if count > 0 else 0
+            # Resolution times
+            avg_with_jira = round(subset[subset['JIRA ID'].str.lower() != 'no jira id']['Resolution Time (Days)'].mean(), 1) if with_jira > 0 else None
+            avg_no_jira = round(subset[subset['JIRA ID'].str.lower() == 'no jira id']['Resolution Time (Days)'].mean(), 1) if no_jira > 0 else None
+            priority_jira_stats.append({
+                'priority': priority,
+                'total': count,
+                'with_jira': with_jira,
+                'no_jira': no_jira,
+                'with_jira_pct': with_jira_pct,
+                'no_jira_pct': no_jira_pct,
+                'avg_with_jira': avg_with_jira,
+                'avg_no_jira': avg_no_jira
+            })
+
+        # Overall resolution time
+        avg_with_jira = round(df[has_jira]['Resolution Time (Days)'].mean(), 1) if with_jira_count > 0 else None
+        avg_no_jira = round(df[no_jira]['Resolution Time (Days)'].mean(), 1) if no_jira_count > 0 else None
+
+        # Unique JIRA IDs
+        unique_jira_ids = df[has_jira]['JIRA ID'].nunique()
+        duplicate_jira_ids = df[has_jira]['JIRA ID'].duplicated().sum()
+
+        # Preview tables
+        preview_with_jira = df[has_jira].head(10).to_html(classes='table table-striped table-hover', index=False)
+        preview_no_jira = df[no_jira].head(10).to_html(classes='table table-striped table-hover', index=False)
+
+        return render_template(
+            'jira_id_analysis.html',
+            filename=filename,
+            total_tickets=total_tickets,
+            with_jira_count=with_jira_count,
+            no_jira_count=no_jira_count,
+            with_jira_pct=with_jira_pct,
+            no_jira_pct=no_jira_pct,
+            avg_with_jira=avg_with_jira,
+            avg_no_jira=avg_no_jira,
+            unique_jira_ids=unique_jira_ids,
+            duplicate_jira_ids=duplicate_jira_ids,
+            priority_jira_stats=priority_jira_stats,
+            preview_with_jira=preview_with_jira,
+            preview_no_jira=preview_no_jira
+        )
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error in JIRA ID analysis: {str(e)}')
+        return redirect(url_for('analyze'))
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False) 
