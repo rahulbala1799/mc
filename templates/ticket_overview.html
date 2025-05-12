@@ -237,18 +237,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card stat-card">
-                                    <div class="stat-value text-warning">{{ metrics.oldest_ticket_age }}</div>
-                                    <div class="stat-label">Oldest Open Ticket (days)</div>
-                                    <div class="mt-2">
-                                        <span class="ratio-indicator {% if metrics.oldest_ticket_age < 30 %}ratio-good{% elif metrics.oldest_ticket_age < 90 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                                            {{ metrics.oldest_ticket_age }} days waiting
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
+                            <div class="col-md-9">
                                 <div class="card h-100">
                                     <div class="card-body">
                                         <h6 class="card-subtitle mb-3 text-muted">Backlog Age Distribution</h6>

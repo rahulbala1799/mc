@@ -401,69 +401,7 @@ def ticket_overview():
                 'counts': list(age_buckets.values())
             }
             
-            # Calculate oldest ticket age only for Open tickets
-            print(f"DEBUG: All unique ticket statuses: {df['Ticket status'].unique()}")
-            
-            # Try a more robust approach to find "Open" tickets with multiple methods
-            # First, try standard case-insensitive string comparison
-            open_tickets = df[df['Ticket status'].str.lower() == 'open']
-            print(f"DEBUG: Method 1 - Found {len(open_tickets)} tickets with status 'open' (case-insensitive)")
-            
-            # If that doesn't work, try using string.contains
-            if len(open_tickets) == 0:
-                open_tickets = df[df['Ticket status'].str.lower().str.contains('open')]
-                print(f"DEBUG: Method 2 - Found {len(open_tickets)} tickets with 'open' in status (contains)")
-            
-            # If still no open tickets, try looking for anything that's not Solved/Hold/Pending/New
-            if len(open_tickets) == 0:
-                not_open_statuses = ['solved', 'hold', 'pending', 'new']
-                open_tickets = df[~df['Ticket status'].str.lower().isin(not_open_statuses)]
-                print(f"DEBUG: Method 3 - Found {len(open_tickets)} tickets that aren't in {not_open_statuses}")
-            
-            # If we still can't find open tickets, use the backlog tickets as a fallback
-            if len(open_tickets) == 0:
-                open_tickets = df[df['Ticket solved - Date'].isna()]
-                print(f"DEBUG: Fallback - Using {len(open_tickets)} backlog tickets for age calculation")
-            
-            # Log sample of open tickets to verify data
-            if not open_tickets.empty:
-                print(f"DEBUG: Sample of tickets used for age calculation (first 5):")
-                sample_open = open_tickets.head(5)
-                for idx, ticket in sample_open.iterrows():
-                    print(f"DEBUG: Ticket ID: {ticket.get('Ticket ID', 'N/A')}, Status: {ticket.get('Ticket status', 'N/A')}, Logged Date: {ticket.get('Logged - Date', 'N/A')}")
-            
-            oldest_ticket_age = 0
-            if not open_tickets.empty:
-                # Ensure Logged - Date column is present and contains datetime values
-                if 'Logged - Date' in open_tickets.columns and not open_tickets['Logged - Date'].isnull().all():
-                    # Calculate age in days
-                    current_date = pd.Timestamp.today()
-                    open_tickets['age_days'] = (current_date - pd.to_datetime(open_tickets['Logged - Date'])).dt.days
-                    
-                    # Print age statistics
-                    print(f"DEBUG: Age calculation statistics - min: {open_tickets['age_days'].min() if not open_tickets['age_days'].isnull().all() else 'N/A'}, max: {open_tickets['age_days'].max() if not open_tickets['age_days'].isnull().all() else 'N/A'}, mean: {open_tickets['age_days'].mean() if not open_tickets['age_days'].isnull().all() else 'N/A'}")
-                    
-                    # Handle negative ages (future dates)
-                    neg_open_ages = len(open_tickets[open_tickets['age_days'] < 0])
-                    if neg_open_ages > 0:
-                        print(f"DEBUG: Found {neg_open_ages} tickets with negative ages - fixing")
-                        open_tickets.loc[open_tickets['age_days'] < 0, 'age_days'] = 0
-                    
-                    # Find the oldest ticket and its details
-                    if not open_tickets['age_days'].isnull().all():
-                        oldest_ticket_age = int(open_tickets['age_days'].max())
-                        oldest_ticket_idx = open_tickets['age_days'].idxmax()
-                        if oldest_ticket_idx in open_tickets.index:
-                            oldest_ticket = open_tickets.loc[oldest_ticket_idx]
-                            print(f"DEBUG: Oldest ticket found - ID: {oldest_ticket.get('Ticket ID', 'N/A')}, Age: {oldest_ticket_age} days, Logged: {oldest_ticket.get('Logged - Date', 'N/A')}")
-                        else:
-                            print(f"DEBUG: Oldest ticket index {oldest_ticket_idx} not found in dataframe")
-                    else:
-                        print("DEBUG: All tickets have null age values")
-                else:
-                    print("DEBUG: Logged - Date column missing or all null in open tickets")
-            else:
-                print("DEBUG: No tickets found for age calculation")
+            # Oldest ticket age calculation removed as it's no longer needed in the UI
         
         except Exception as e:
             print(f"Error in backlog calculation: {str(e)}")
@@ -504,7 +442,7 @@ def ticket_overview():
                 'labels': ['< 30 days', '30-60 days', '60-90 days', '> 90 days'],
                 'counts': [0, 0, 0, 0]
             }
-            oldest_ticket_age = 0
+            # Removed oldest_ticket_age initialization as it's no longer used
             
             # Try to calculate the age distribution even if monthly backlog failed
             try:
@@ -678,8 +616,7 @@ def ticket_overview():
             'pending_percentage': pending_percentage,
             'new_percentage': new_percentage,
             'within_sla_percentage': within_sla_percentage,
-            'current_backlog': current_backlog,
-            'oldest_ticket_age': oldest_ticket_age if 'oldest_ticket_age' in locals() else 0
+            'current_backlog': current_backlog
         }
         
         # Generate data for tables
