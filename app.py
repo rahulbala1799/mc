@@ -260,37 +260,37 @@ def ticket_overview():
                 'region_breakdown': []
             }
             
-            # Track tickets present in each month
-            current_tickets = set()
-            backlog_tickets = set()
+            # For each month, process tickets chronologically
+            # Convert month strings to datetime for proper comparison
+            month_dates = [pd.to_datetime(month + "-01") for month in unique_months]
             
-            for month in unique_months:
-                # Get tickets from this month (with validation)
-                month_df = df[df['Month'] == month]
-                if month_df.empty:
-                    continue
+            for i, month in enumerate(unique_months):
+                month_date = month_dates[i]
+                month_end = month_date + pd.offsets.MonthEnd(1)
+                
+                # Get all tickets created up to this month (including this month)
+                tickets_up_to_now = df[pd.to_datetime(df['Logged - Date']) <= month_end]
                 
                 # New tickets this month
-                new_ticket_ids = set(month_df['Ticket ID'].dropna().astype(str).tolist())
-                new_count = len(new_ticket_ids)
+                new_tickets_this_month = df[df['Month'] == month]
+                new_count = len(new_tickets_this_month)
                 
                 # Solved tickets this month
-                solved_month_df = month_df[month_df['Ticket status'] == 'Solved']
-                solved_ticket_ids = set(solved_month_df['Ticket ID'].dropna().astype(str).tolist())
-                solved_count = len(solved_ticket_ids)
+                solved_month_df = df[(df['Month'] == month) & (df['Ticket status'] == 'Solved')]
+                solved_count = len(solved_month_df)
                 
-                # Update current tickets
-                current_tickets = current_tickets.union(new_ticket_ids)
+                # Backlog is all tickets created up to this month without a solved date by month end
+                # A ticket is part of backlog if:
+                # 1. It was created on or before this month
+                # 2. It doesn't have a solved date, or the solved date is after this month
+                backlog_df = tickets_up_to_now[
+                    (pd.isna(tickets_up_to_now['Ticket solved - Date'])) | 
+                    (pd.to_datetime(tickets_up_to_now['Ticket solved - Date']) > month_end)
+                ]
+                backlog_count = len(backlog_df)
                 
-                # Remove solved tickets from tracking
-                current_tickets = current_tickets - solved_ticket_ids
-                
-                # Backlog is anything in current_tickets that wasn't new this month
-                backlog_tickets = current_tickets - new_ticket_ids
-                backlog_count = len(backlog_tickets)
-                
-                # Get backlog tickets from the DataFrame (with validation)
-                backlog_df = df[df['Ticket ID'].astype(str).isin(backlog_tickets)]
+                # Debug print for backlog calculation
+                print(f"DEBUG: Month {month}: Backlog count = {backlog_count}, New tickets = {new_count}, Solved tickets = {solved_count}")
                 
                 # Get priority breakdown for backlog
                 priority_breakdown = {}
