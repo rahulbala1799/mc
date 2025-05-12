@@ -192,15 +192,19 @@ def ticket_overview():
         
         # Calculate percentages for ticket status
         total_tickets = len(df)
-        # solved_count = len(solved_tickets)
-        solved_count = len(df[df['Ticket status'] == 'Solved'])
-        print(f"DEBUG: Total solved tickets: {solved_count}")
-        open_count = len(df[df['Ticket status'] == 'Open'])
-        hold_count = len(df[df['Ticket status'] == 'Hold'])
+        # Count each status type
+        solved_count = len(df[df['Ticket status'].str.lower() == 'solved'])
+        open_count = len(df[df['Ticket status'].str.lower() == 'open'])
+        hold_count = len(df[df['Ticket status'].str.lower() == 'hold'])
+        pending_count = len(df[df['Ticket status'].str.lower() == 'pending'])
+        new_count = len(df[df['Ticket status'].str.lower() == 'new'])
         
+        # Calculate percentages
         solved_percentage = round((solved_count / total_tickets) * 100) if total_tickets > 0 else 0
         open_percentage = round((open_count / total_tickets) * 100) if total_tickets > 0 else 0
         hold_percentage = round((hold_count / total_tickets) * 100) if total_tickets > 0 else 0
+        pending_percentage = round((pending_count / total_tickets) * 100) if total_tickets > 0 else 0
+        new_percentage = round((new_count / total_tickets) * 100) if total_tickets > 0 else 0
         
         # By region
         region_metrics = solved_tickets.groupby('Region')['Resolution Time (Days)'].mean().sort_values()
@@ -512,11 +516,16 @@ def ticket_overview():
             'by_engineer': engineer_metrics.round(1).to_dict(),
             'by_priority': priority_metrics.round(1).to_dict(),
             'total_tickets': total_tickets,
+            'solved_tickets': solved_count,
             'open_tickets': open_count,
             'hold_tickets': hold_count,
+            'pending_tickets': pending_count,
+            'new_tickets': new_count, 
             'solved_percentage': solved_percentage,
             'open_percentage': open_percentage,
             'hold_percentage': hold_percentage,
+            'pending_percentage': pending_percentage,
+            'new_percentage': new_percentage,
             'within_sla_percentage': within_sla_percentage,
             'current_backlog': current_backlog,
             'oldest_ticket_age': oldest_ticket_age if 'oldest_ticket_age' in locals() else 0

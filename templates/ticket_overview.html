@@ -154,15 +154,15 @@
 
         <!-- Summary Stats -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md-4 col-lg mb-3">
                 <div class="card stat-card">
                     <div class="stat-value text-primary">{{ metrics.total_tickets }}</div>
                     <div class="stat-label">Total Tickets</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4 col-lg mb-3">
                 <div class="card stat-card">
-                    <div class="stat-value text-success">{{ metrics.total_tickets - metrics.open_tickets - metrics.hold_tickets }}</div>
+                    <div class="stat-value text-success">{{ metrics.solved_tickets }}</div>
                     <div class="stat-label">Solved Tickets</div>
                     <div class="mt-2">
                         <span class="ratio-indicator {% if metrics.solved_percentage > 75 %}ratio-good{% elif metrics.solved_percentage > 50 %}ratio-medium{% else %}ratio-bad{% endif %}">
@@ -171,7 +171,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4 col-lg mb-3">
                 <div class="card stat-card">
                     <div class="stat-value text-warning">{{ metrics.open_tickets }}</div>
                     <div class="stat-label">Open Tickets</div>
@@ -182,13 +182,35 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4 col-lg mb-3">
                 <div class="card stat-card">
                     <div class="stat-value text-danger">{{ metrics.hold_tickets }}</div>
                     <div class="stat-label">On Hold</div>
                     <div class="mt-2">
                         <span class="ratio-indicator {% if metrics.hold_percentage < 10 %}ratio-good{% elif metrics.hold_percentage < 25 %}ratio-medium{% else %}ratio-bad{% endif %}">
                             {{ metrics.hold_percentage }}% of total
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg mb-3">
+                <div class="card stat-card">
+                    <div class="stat-value text-info">{{ metrics.pending_tickets }}</div>
+                    <div class="stat-label">Pending Tickets</div>
+                    <div class="mt-2">
+                        <span class="ratio-indicator {% if metrics.pending_percentage < 10 %}ratio-good{% elif metrics.pending_percentage < 25 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                            {{ metrics.pending_percentage }}% of total
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg mb-3">
+                <div class="card stat-card">
+                    <div class="stat-value text-secondary">{{ metrics.new_tickets }}</div>
+                    <div class="stat-label">New Tickets</div>
+                    <div class="mt-2">
+                        <span class="ratio-indicator {% if metrics.new_percentage < 10 %}ratio-good{% elif metrics.new_percentage < 25 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                            {{ metrics.new_percentage }}% of total
                         </span>
                     </div>
                 </div>
