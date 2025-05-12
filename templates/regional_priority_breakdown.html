@@ -279,9 +279,9 @@
                                         <td>{{ overall_priority_percentages.get(priority, 0) }}%</td>
                                         <td>
                                             <div class="progress" style="height: 10px; width: 100%;">
-                                                <div class="progress-bar bg-success" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Solved')].shape[0] / count * 100)|round }}%"></div>
-                                                <div class="progress-bar bg-warning" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Open')].shape[0] / count * 100)|round }}%"></div>
-                                                <div class="progress-bar bg-danger" style="width: {{ (df[(df['Priority'] == priority) & (df['Ticket status'] == 'Hold')].shape[0] / count * 100)|round }}%"></div>
+                                                <div class="progress-bar bg-success" style="width: {{ priority_status_percentages.get(priority, {}).get('Solved', 0) }}%"></div>
+                                                <div class="progress-bar bg-warning" style="width: {{ priority_status_percentages.get(priority, {}).get('Open', 0) }}%"></div>
+                                                <div class="progress-bar bg-danger" style="width: {{ priority_status_percentages.get(priority, {}).get('Hold', 0) }}%"></div>
                                             </div>
                                         </td>
                                     </tr>

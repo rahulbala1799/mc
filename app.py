@@ -830,8 +830,23 @@ def regional_priority_breakdown():
         # Overall priority metrics
         overall_priority_counts = df.groupby('Priority').size().to_dict()
         overall_priority_percentages = {}
+        priority_status_percentages = {}
+        
         for priority, count in overall_priority_counts.items():
             overall_priority_percentages[priority] = round((count / len(df)) * 100)
+            
+            # Calculate status percentages for each priority
+            priority_df = df[df['Priority'] == priority]
+            solved_count = len(priority_df[priority_df['Ticket status'] == 'Solved'])
+            open_count = len(priority_df[priority_df['Ticket status'] == 'Open'])
+            hold_count = len(priority_df[priority_df['Ticket status'] == 'Hold'])
+            
+            # Store percentages
+            priority_status_percentages[priority] = {
+                'Solved': round((solved_count / count) * 100) if count > 0 else 0,
+                'Open': round((open_count / count) * 100) if count > 0 else 0,
+                'Hold': round((hold_count / count) * 100) if count > 0 else 0
+            }
         
         # For each region, calculate priority metrics
         for region in regions:
@@ -961,7 +976,9 @@ def regional_priority_breakdown():
             overall_priority_percentages=overall_priority_percentages,
             regional_priority_data=regional_priority_data,
             priority_comparison_data=priority_comparison_data,
-            resolution_comparison_data=resolution_comparison_data
+            resolution_comparison_data=resolution_comparison_data,
+            priority_status_percentages=priority_status_percentages,
+            df=df
         )
         
     except Exception as e:
