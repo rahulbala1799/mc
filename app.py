@@ -1560,8 +1560,7 @@ def priority_analysis():
             priority_metrics=priority_metrics,
             sorted_priorities=sorted_priorities,
             sla_data=sla_data,
-            sla_compliance_by_region=sla_by_region,
-            sla_chart_data=sla_chart_data
+            sla_compliance_by_region=sla_by_region
         )
         
     except Exception as e:
