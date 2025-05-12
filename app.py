@@ -1285,6 +1285,12 @@ def engineer_analysis():
         
         # Engineer analysis
         solved_tickets = df[df['Ticket status'] == 'Solved']
+        open_tickets = df[df['Ticket status'] == 'Open']
+        
+        # Get unique engineers and exclude "Unassigned"
+        all_engineers = sorted([eng for eng in df['Assignee name'].unique() if eng.lower() != 'unassigned'])
+        
+        # === PERFORMANCE METRICS ===
         
         # Average resolution time by engineer
         engineer_avg = solved_tickets.groupby('Assignee name')['Resolution Time (Days)'].mean().sort_values()
@@ -1294,6 +1300,69 @@ def engineer_analysis():
             columns=['Assignee name', 'Resolution Time (Days)'],
             header=['Engineer', 'Avg. Resolution Time (Days)']
         )
+        
+        # Calculate engineer performance metrics
+        engineer_metrics = {}
+        for engineer in all_engineers:
+            # Skip if this is "Unassigned"
+            if engineer.lower() == 'unassigned':
+                continue
+                
+            eng_solved = solved_tickets[solved_tickets['Assignee name'] == engineer]
+            eng_open = open_tickets[open_tickets['Assignee name'] == engineer]
+            eng_all = df[df['Assignee name'] == engineer]
+            
+            # Basic counts
+            solved_count = len(eng_solved)
+            open_count = len(eng_open)
+            total_count = len(eng_all)
+            
+            # Skip engineers with no tickets
+            if total_count == 0:
+                continue
+                
+            # Calculate metrics
+            metrics = {
+                'total_tickets': total_count,
+                'solved_tickets': solved_count,
+                'open_tickets': open_count,
+                'solution_rate': round((solved_count / total_count) * 100 if total_count > 0 else 0, 1),
+                'avg_resolution_time': round(eng_solved['Resolution Time (Days)'].mean(), 1) if len(eng_solved) > 0 else None,
+                'min_resolution_time': round(eng_solved['Resolution Time (Days)'].min(), 1) if len(eng_solved) > 0 else None,
+                'max_resolution_time': round(eng_solved['Resolution Time (Days)'].max(), 1) if len(eng_solved) > 0 else None,
+            }
+            
+            # Calculate by priority metrics if we have solved tickets
+            if len(eng_solved) > 0:
+                priority_resolution = {}
+                for priority in eng_solved['Priority'].unique():
+                    priority_tickets = eng_solved[eng_solved['Priority'] == priority]
+                    if len(priority_tickets) > 0:
+                        avg_time = priority_tickets['Resolution Time (Days)'].mean()
+                        priority_resolution[priority] = round(avg_time, 1)
+                metrics['priority_resolution'] = priority_resolution
+            
+            # Calculate tickets by group
+            group_distribution = {}
+            for group in eng_all['Level 3 Group'].unique():
+                group_tickets = eng_all[eng_all['Level 3 Group'] == group]
+                group_distribution[group] = len(group_tickets)
+            metrics['group_distribution'] = group_distribution
+            
+            # Calculate region distribution
+            region_distribution = {}
+            for region in eng_all['Region'].unique():
+                region_tickets = eng_all[eng_all['Region'] == region]
+                region_distribution[region] = len(region_tickets)
+            metrics['region_distribution'] = region_distribution
+            
+            # Store metrics for this engineer
+            engineer_metrics[engineer] = metrics
+        
+        # Sort engineers by total ticket count for the leaderboard
+        sorted_engineers = sorted(engineer_metrics.items(), key=lambda x: x[1]['total_tickets'], reverse=True)
+        
+        # === TICKET COUNT AND STATUS METRICS ===
         
         # Ticket count by engineer
         engineer_count = df.groupby(['Assignee name', 'Ticket status']).size().unstack(fill_value=0)
@@ -1310,6 +1379,8 @@ def engineer_analysis():
             index=False
         )
         
+        # === WORKLOAD DISTRIBUTION METRICS ===
+        
         # Engineer distribution by region
         engineer_region = df.groupby(['Assignee name', 'Region']).size().unstack(fill_value=0)
         engineer_region_html = engineer_region.reset_index().to_html(
@@ -1317,13 +1388,57 @@ def engineer_analysis():
             index=False
         )
         
+        # Engineer distribution by group/department
+        engineer_group = df.groupby(['Assignee name', 'Level 3 Group']).size().unstack(fill_value=0)
+        engineer_group_html = engineer_group.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # Engineer distribution by priority
+        engineer_priority = df.groupby(['Assignee name', 'Priority']).size().unstack(fill_value=0)
+        engineer_priority_html = engineer_priority.reset_index().to_html(
+            classes='table table-striped table-hover',
+            index=False
+        )
+        
+        # === EFFICIENCY METRICS ===
+        
+        # Time efficiency - tickets resolved per time period
+        # Calculate average days to resolve for each engineer
+        efficiency_data = []
+        for engineer, metrics in sorted_engineers:
+            if metrics['avg_resolution_time'] is not None:
+                efficiency = {
+                    'engineer': engineer,
+                    'avg_days': metrics['avg_resolution_time'],
+                    'tickets_solved': metrics['solved_tickets'],
+                    'productivity_score': round(metrics['solved_tickets'] / metrics['avg_resolution_time'], 2) if metrics['avg_resolution_time'] > 0 else 0
+                }
+                efficiency_data.append(efficiency)
+        
+        # Sort by productivity score (tickets solved per day on average)
+        efficiency_data = sorted(efficiency_data, key=lambda x: x['productivity_score'], reverse=True)
+        
+        # === TRENDING ENGINEERS METRICS ===
+        
+        # Calculate which engineers have improved the most recently
+        # This is a placeholder - in a real implementation we'd compare recent vs. historical performance
+        trending_engineers = sorted_engineers[:5]  # Just use top 5 for now
+        
         return render_template(
             'engineer_analysis.html',
             filename=filename,
             engineer_avg_html=engineer_avg_html,
             engineer_count_html=engineer_count_html,
             engineer_region_html=engineer_region_html,
-            engineers=sorted(df['Assignee name'].unique())
+            engineer_group_html=engineer_group_html,
+            engineer_priority_html=engineer_priority_html,
+            engineers=all_engineers,
+            engineer_metrics=engineer_metrics,
+            sorted_engineers=sorted_engineers,
+            efficiency_data=efficiency_data,
+            trending_engineers=trending_engineers
         )
         
     except Exception as e:
