@@ -173,7 +173,8 @@ def analyze():
         )
         
     except Exception as e:
-        flash(f'Error analyzing file: {str(e)}')
+        traceback.print_exc()
+        flash(f'Error analyzing ticket data: {str(e)}')
         return redirect(url_for('index'))
 
 @app.route('/ticket_overview')
@@ -764,9 +765,8 @@ def ticket_overview():
             group_details_open=group_details_open,
             group_details_hold=group_details_hold
         )
-        
+    
     except Exception as e:
-        import traceback
         traceback.print_exc()
         flash(f'Error analyzing ticket data: {str(e)}')
         return redirect(url_for('index'))
@@ -959,6 +959,7 @@ def region_analysis():
         )
         
     except Exception as e:
+        traceback.print_exc()
         flash(f'Error in region analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
 
@@ -1242,7 +1243,6 @@ def regional_priority_breakdown():
         )
         
     except Exception as e:
-        import traceback
         traceback.print_exc()
         flash(f'Error in regional priority breakdown: {str(e)}')
         return redirect(url_for('region_analysis'))
