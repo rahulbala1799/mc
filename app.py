@@ -317,14 +317,15 @@ def ticket_overview():
                 backlog_data['region_breakdown'].append(region_breakdown)
             
             # Calculate current backlog age distribution
-            current_open_tickets = df[(df['Ticket status'] == 'Open') | (df['Ticket status'] == 'Hold')]
+            # Use tickets without solved date instead of just open and hold tickets
+            current_backlog_tickets = df[df['Ticket solved - Date'].isna()]
             
             # Calculate age of tickets in days
             current_date = pd.Timestamp.today()
-            current_open_tickets['age_days'] = (current_date - pd.to_datetime(current_open_tickets['Logged - Date'])).dt.days
+            current_backlog_tickets['age_days'] = (current_date - pd.to_datetime(current_backlog_tickets['Logged - Date'])).dt.days
             
             # Check for negative ages (future dates) and reset them to 0
-            current_open_tickets.loc[current_open_tickets['age_days'] < 0, 'age_days'] = 0
+            current_backlog_tickets.loc[current_backlog_tickets['age_days'] < 0, 'age_days'] = 0
             
             # Age buckets
             age_buckets = {
@@ -334,7 +335,7 @@ def ticket_overview():
                 '> 90 days': 0
             }
             
-            for _, ticket in current_open_tickets.iterrows():
+            for _, ticket in current_backlog_tickets.iterrows():
                 if pd.isna(ticket['age_days']):
                     continue
                     
@@ -355,8 +356,8 @@ def ticket_overview():
             
             # Calculate oldest ticket age safely
             oldest_ticket_age = 0
-            if not current_open_tickets.empty and not current_open_tickets['age_days'].isnull().all():
-                oldest_ticket_age = int(current_open_tickets['age_days'].max())
+            if not current_backlog_tickets.empty and not current_backlog_tickets['age_days'].isnull().all():
+                oldest_ticket_age = int(current_backlog_tickets['age_days'].max())
             
         except Exception as e:
             print(f"Error in backlog calculation: {str(e)}")
@@ -486,8 +487,10 @@ def ticket_overview():
         # Store the dataframe in a session variable for other routes
         session['ticket_data_processed'] = True
         
-        # Calculate current backlog count
-        current_backlog = open_count + hold_count
+        # Calculate current backlog count - everything that doesn't have a Ticket solved - Date
+        # Instead of just adding open and hold tickets, identify tickets without a solved date
+        current_backlog = len(df[df['Ticket solved - Date'].isna()])
+        print(f"DEBUG: Current backlog (tickets without solved date): {current_backlog}")
         
         metrics = {
             'all_tickets_avg': round(all_tickets_mean, 1) if not pd.isna(all_tickets_mean) else "N/A",
