@@ -100,7 +100,13 @@
             </div>
         </div>
 
-        {% if 'JIRA ID' in columns %}
+        {% set jira_id_col = None %}
+        {% for col in columns %}
+            {% if col|lower|replace(' ', '') == 'jiraid' %}
+                {% set jira_id_col = col %}
+            {% endif %}
+        {% endfor %}
+        {% if jira_id_col %}
         <div class="text-center mb-4">
             <a href="{{ url_for('jira_id_analysis') }}" class="btn btn-info btn-lg">
                 <i class="bi bi-link-45deg"></i> JIRA ID Analysis
