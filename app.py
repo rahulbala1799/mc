@@ -370,10 +370,15 @@ def ticket_overview():
                 'counts': list(age_buckets.values())
             }
             
-            # Calculate oldest ticket age safely
+            # Calculate oldest ticket age only for Open tickets
+            open_tickets = df[df['Ticket status'].str.lower() == 'open']
             oldest_ticket_age = 0
-            if not current_backlog_tickets.empty and not current_backlog_tickets['age_days'].isnull().all():
-                oldest_ticket_age = int(current_backlog_tickets['age_days'].max())
+            if not open_tickets.empty:
+                open_tickets['age_days'] = (current_date - pd.to_datetime(open_tickets['Logged - Date'])).dt.days
+                # Handle negative ages (future dates)
+                open_tickets.loc[open_tickets['age_days'] < 0, 'age_days'] = 0
+                if not open_tickets['age_days'].isnull().all():
+                    oldest_ticket_age = int(open_tickets['age_days'].max())
             
         except Exception as e:
             print(f"Error in backlog calculation: {str(e)}")

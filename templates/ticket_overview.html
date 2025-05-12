@@ -243,7 +243,7 @@
                                     <div class="stat-label">Oldest Open Ticket (days)</div>
                                     <div class="mt-2">
                                         <span class="ratio-indicator {% if metrics.oldest_ticket_age < 30 %}ratio-good{% elif metrics.oldest_ticket_age < 90 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                                            {{ metrics.oldest_ticket_age }} days without resolution
+                                            {{ metrics.oldest_ticket_age }} days waiting
                                         </span>
                                     </div>
                                 </div>
