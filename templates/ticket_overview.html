@@ -867,10 +867,20 @@
             if (backlogPriorityCtx) {
                 // Get the latest backlog priority breakdown or empty object if not available
                 let lastPriorityBreakdown = safeJsonParse('{{ backlog_data.priority_breakdown|tojson }}', []);
-                let latestPriorityData = lastPriorityBreakdown.length > 0 ? lastPriorityBreakdown[lastPriorityBreakdown.length - 1] : {};
+                console.log('DEBUG - Priority Breakdown data:', lastPriorityBreakdown);
+                
+                let latestPriorityData = {};
+                if (lastPriorityBreakdown.length > 0) {
+                    latestPriorityData = lastPriorityBreakdown[lastPriorityBreakdown.length - 1];
+                    console.log('DEBUG - Latest Priority data:', latestPriorityData);
+                } else {
+                    console.warn('DEBUG - No priority breakdown data available');
+                }
                 
                 const priorityLabels = Object.keys(latestPriorityData);
                 const priorityCounts = Object.values(latestPriorityData);
+                console.log('DEBUG - Priority labels:', priorityLabels);
+                console.log('DEBUG - Priority counts:', priorityCounts);
                 
                 new Chart(backlogPriorityCtx.getContext('2d'), {
                     type: 'pie',
@@ -900,6 +910,8 @@
                         }
                     }
                 });
+            } else {
+                console.error("DEBUG - backlogPriorityChart element not found in DOM");
             }
         } catch (e) {
             console.error("Error creating backlog priority chart:", e);
@@ -911,10 +923,20 @@
             if (backlogRegionCtx) {
                 // Get the latest backlog region breakdown or empty object if not available
                 let lastRegionBreakdown = safeJsonParse('{{ backlog_data.region_breakdown|tojson }}', []);
-                let latestRegionData = lastRegionBreakdown.length > 0 ? lastRegionBreakdown[lastRegionBreakdown.length - 1] : {};
+                console.log('DEBUG - Region Breakdown data:', lastRegionBreakdown);
+                
+                let latestRegionData = {};
+                if (lastRegionBreakdown.length > 0) {
+                    latestRegionData = lastRegionBreakdown[lastRegionBreakdown.length - 1];
+                    console.log('DEBUG - Latest Region data:', latestRegionData);
+                } else {
+                    console.warn('DEBUG - No region breakdown data available');
+                }
                 
                 const regionLabels = Object.keys(latestRegionData);
                 const regionCounts = Object.values(latestRegionData);
+                console.log('DEBUG - Region labels:', regionLabels);
+                console.log('DEBUG - Region counts:', regionCounts);
                 
                 new Chart(backlogRegionCtx.getContext('2d'), {
                     type: 'pie',
