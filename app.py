@@ -269,18 +269,16 @@ def ticket_overview():
         try:
             # Sort DataFrame by month to process chronologically
             df_sorted = df.sort_values('Logged - Date')
-            
             # Check for missing Ticket IDs but don't abort
             missing_ids = df['Ticket ID'].isnull().sum()
             if missing_ids > 0:
                 print(f"WARNING: Found {missing_ids} records with missing Ticket IDs - continuing with analysis")
-                # Fill missing IDs with placeholder values to avoid aborting the analysis
                 df['Ticket ID'] = df['Ticket ID'].fillna('UNKNOWN-' + df.index.astype(str))
-            
             # Get unique months in sorted order
             unique_months = df_sorted['Month'].dropna().unique().tolist()
-            
+            print(f"DEBUG: unique_months = {unique_months}")
             if not unique_months:
+                print("ERROR: No valid months found for backlog analysis")
                 raise ValueError("No valid months found for backlog analysis")
             
             # Initialize backlog tracking
@@ -406,6 +404,8 @@ def ticket_overview():
             print(f"Error in backlog calculation: {str(e)}")
             traceback_str = traceback.format_exc()
             print(f"DEBUG: Backlog calculation error details:\n{traceback_str}")
+            print(f"DEBUG: DataFrame shape: {df.shape}, columns: {df.columns.tolist()}")
+            print(f"DEBUG: Sample data: {df.head(10).to_dict()}")
             
             # Provide default empty data if backlog calculation fails, but include the correct backlog count
             # We know the current backlog at least
