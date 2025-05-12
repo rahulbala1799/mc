@@ -1238,6 +1238,58 @@ def regional_priority_breakdown():
                 'fill': False
             })
         
+        # === SLA COMPLIANCE BY REGION ===
+        # For each region, for each priority, calculate SLA compliance
+        regions = sorted(df['Region'].unique())
+        sla_compliance_by_region = {}
+        for region in regions:
+            region_data = df[df['Region'] == region]
+            region_sla = {}
+            for priority in all_priorities:
+                # Use robust normalization for priority
+                norm_priority = normalize_priority(priority)
+                if 'urgent' in norm_priority:
+                    sla_threshold = sla_thresholds['urgent']
+                elif 'high' in norm_priority:
+                    sla_threshold = sla_thresholds['high']
+                elif 'normal' in norm_priority:
+                    sla_threshold = sla_thresholds['normal']
+                elif 'low' in norm_priority:
+                    sla_threshold = sla_thresholds['low']
+                else:
+                    sla_threshold = sla_thresholds['no priority']
+                
+                region_priority_solved = region_data[(region_data['Priority'] == priority) & (region_data['Ticket status'] == 'Solved')]
+                solved_count = len(region_priority_solved)
+                if solved_count > 0:
+                    within_sla = len(region_priority_solved[region_priority_solved['Resolution Time (Days)'] <= sla_threshold])
+                    compliance_rate = round((within_sla / solved_count) * 100, 1)
+                else:
+                    compliance_rate = None
+                region_sla[priority] = compliance_rate
+            sla_compliance_by_region[region] = region_sla
+        # Prepare chart data: regions as labels, for each priority a dataset
+        sla_chart_data = {
+            'labels': regions,
+            'datasets': []
+        }
+        for priority in all_priorities:
+            data = [sla_compliance_by_region[region][priority] if sla_compliance_by_region[region][priority] is not None else 0 for region in regions]
+            # Assign a color for each priority
+            color_map = {
+                'Urgent': 'rgba(220, 53, 69, 0.7)',
+                'High': 'rgba(255, 193, 7, 0.7)',
+                'Normal': 'rgba(25, 135, 84, 0.7)',
+                'Low': 'rgba(13, 110, 253, 0.7)',
+                'No Priority': 'rgba(108, 117, 125, 0.7)'
+            }
+            color = color_map.get(priority, 'rgba(108, 117, 125, 0.7)')
+            sla_chart_data['datasets'].append({
+                'label': str(priority),
+                'data': data,
+                'backgroundColor': color
+            })
+        
         return render_template(
             'regional_priority_breakdown.html',
             filename=filename,
@@ -1254,7 +1306,9 @@ def regional_priority_breakdown():
             ticket_resolution_data=ticket_resolution_data,
             page=page,
             total_pages=total_pages,
-            total_solved=total_solved
+            total_solved=total_solved,
+            sla_compliance_by_region=sla_compliance_by_region,
+            sla_chart_data=sla_chart_data
         )
         
     except Exception as e:
@@ -1631,6 +1685,58 @@ def priority_analysis():
             index=False
         )
         
+        # === SLA COMPLIANCE BY REGION ===
+        # For each region, for each priority, calculate SLA compliance
+        regions = sorted(df['Region'].unique())
+        sla_compliance_by_region = {}
+        for region in regions:
+            region_data = df[df['Region'] == region]
+            region_sla = {}
+            for priority in all_priorities:
+                # Use robust normalization for priority
+                norm_priority = normalize_priority(priority)
+                if 'urgent' in norm_priority:
+                    sla_threshold = sla_thresholds['urgent']
+                elif 'high' in norm_priority:
+                    sla_threshold = sla_thresholds['high']
+                elif 'normal' in norm_priority:
+                    sla_threshold = sla_thresholds['normal']
+                elif 'low' in norm_priority:
+                    sla_threshold = sla_thresholds['low']
+                else:
+                    sla_threshold = sla_thresholds['no priority']
+                
+                region_priority_solved = region_data[(region_data['Priority'] == priority) & (region_data['Ticket status'] == 'Solved')]
+                solved_count = len(region_priority_solved)
+                if solved_count > 0:
+                    within_sla = len(region_priority_solved[region_priority_solved['Resolution Time (Days)'] <= sla_threshold])
+                    compliance_rate = round((within_sla / solved_count) * 100, 1)
+                else:
+                    compliance_rate = None
+                region_sla[priority] = compliance_rate
+            sla_compliance_by_region[region] = region_sla
+        # Prepare chart data: regions as labels, for each priority a dataset
+        sla_chart_data = {
+            'labels': regions,
+            'datasets': []
+        }
+        for priority in all_priorities:
+            data = [sla_compliance_by_region[region][priority] if sla_compliance_by_region[region][priority] is not None else 0 for region in regions]
+            # Assign a color for each priority
+            color_map = {
+                'Urgent': 'rgba(220, 53, 69, 0.7)',
+                'High': 'rgba(255, 193, 7, 0.7)',
+                'Normal': 'rgba(25, 135, 84, 0.7)',
+                'Low': 'rgba(13, 110, 253, 0.7)',
+                'No Priority': 'rgba(108, 117, 125, 0.7)'
+            }
+            color = color_map.get(priority, 'rgba(108, 117, 125, 0.7)')
+            sla_chart_data['datasets'].append({
+                'label': str(priority),
+                'data': data,
+                'backgroundColor': color
+            })
+        
         return render_template(
             'priority_analysis.html',
             filename=filename,
@@ -1643,7 +1749,9 @@ def priority_analysis():
             priorities=all_priorities,
             priority_metrics=priority_metrics,
             sorted_priorities=sorted_priorities,
-            sla_data=sla_data
+            sla_data=sla_data,
+            sla_compliance_by_region=sla_compliance_by_region,
+            sla_chart_data=sla_chart_data
         )
         
     except Exception as e:
