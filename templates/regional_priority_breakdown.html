@@ -175,6 +175,24 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Additional styles for priority tables */
+        .table-bordered {
+            border: 1px solid #dee2e6;
+        }
+        .table-bordered th, 
+        .table-bordered td {
+            border: 1px solid #dee2e6;
+        }
+        .table-light {
+            background-color: #f8f9fa;
+        }
+        .table-priority th {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .table-priority td {
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -472,14 +490,14 @@
         <!-- Region Priority Details Section -->
         <h5 class="mb-3">Regional Priority Details</h5>
         
-        <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+        <div class="row row-cols-1 row-cols-lg-2 g-4 mb-4">
             {% for region in regions %}
             {% if regional_priority_data.get(region, {}).get('total_tickets', 0) > 0 %}
             <div class="col">
                 <div class="card h-100 region-card">
                     <div class="card-header priority-header">
                         <h5 class="card-title mb-0">{{ region }}</h5>
-                        <span class="badge bg-primary">
+                        <span class="badge bg-primary rounded-pill">
                             {{ regional_priority_data.get(region, {}).get('total_tickets', 0) }} tickets
                         </span>
                     </div>
@@ -495,14 +513,14 @@
                             <!-- Priority table -->
                             <div class="col-md-7">
                                 <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                                    <table class="table table-sm table-compact">
-                                        <thead>
+                                    <table class="table table-sm table-bordered table-compact table-priority">
+                                        <thead class="table-light">
                                             <tr>
-                                                <th>Priority</th>
-                                                <th>Count</th>
-                                                <th>Open</th>
-                                                <th>Solved</th>
-                                                <th>Avg</th>
+                                                <th style="width: 30%;">Priority</th>
+                                                <th style="width: 15%; text-align: center;">Count</th>
+                                                <th style="width: 15%; text-align: center;">Open</th>
+                                                <th style="width: 15%; text-align: center;">Solved</th>
+                                                <th style="width: 25%; text-align: center;">Avg</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -518,10 +536,10 @@
                                                         {{ priority }}
                                                     </span>
                                                 </td>
-                                                <td>{{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }}</td>
-                                                <td>{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Open', 0) }}</td>
-                                                <td>{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Solved', 0) }}</td>
-                                                <td>
+                                                <td style="text-align: center;">{{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }}</td>
+                                                <td style="text-align: center;">{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Open', 0) }}</td>
+                                                <td style="text-align: center;">{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Solved', 0) }}</td>
+                                                <td style="text-align: center;">
                                                     {% set resolution_time = regional_priority_data.get(region, {}).get('resolution_by_priority', {}).get(priority, 'N/A') %}
                                                     {% if resolution_time != 'N/A' %}
                                                         <span class="badge 
