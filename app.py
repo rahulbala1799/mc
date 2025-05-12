@@ -1240,7 +1240,7 @@ def regional_priority_breakdown():
         for region in regions:
             region_data = df[df['Region'] == region]
             region_sla = {}
-            for priority in all_priorities:
+            for priority in priorities:
                 # Use robust normalization for priority
                 norm_priority = normalize_priority(priority)
                 if 'urgent' in norm_priority:
@@ -1268,7 +1268,7 @@ def regional_priority_breakdown():
             'labels': regions,
             'datasets': []
         }
-        for priority in all_priorities:
+        for priority in priorities:
             data = [sla_compliance_by_region[region][priority] if sla_compliance_by_region[region][priority] is not None else 0 for region in regions]
             # Assign a color for each priority
             color_map = {
@@ -1687,7 +1687,7 @@ def priority_analysis():
         for region in regions:
             region_data = df[df['Region'] == region]
             region_sla = {}
-            for priority in all_priorities:
+            for priority in priorities:
                 # Use robust normalization for priority
                 norm_priority = normalize_priority(priority)
                 if 'urgent' in norm_priority:
@@ -1715,7 +1715,7 @@ def priority_analysis():
             'labels': regions,
             'datasets': []
         }
-        for priority in all_priorities:
+        for priority in priorities:
             data = [sla_compliance_by_region[region][priority] if sla_compliance_by_region[region][priority] is not None else 0 for region in regions]
             # Assign a color for each priority
             color_map = {
