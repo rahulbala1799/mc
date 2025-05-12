@@ -800,6 +800,170 @@ def region_analysis():
         flash(f'Error in region analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
 
+@app.route('/regional_priority_breakdown')
+def regional_priority_breakdown():
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    
+    if not filepath or not os.path.exists(filepath):
+        flash('Please upload a file first')
+        return redirect(url_for('index'))
+    
+    if not session.get('ticket_data_processed'):
+        return redirect(url_for('ticket_overview'))
+    
+    try:
+        # Load and process ticket data
+        df = pd.read_excel(filepath)
+        df = process_ticket_data(df)
+        
+        # Get unique regions and priorities
+        regions = sorted(df['Region'].unique())
+        priorities = sorted(df['Priority'].unique())
+        
+        # Calculate regional priority metrics
+        regional_priority_data = {}
+        
+        # Overall priority metrics
+        overall_priority_counts = df.groupby('Priority').size().to_dict()
+        overall_priority_percentages = {}
+        for priority, count in overall_priority_counts.items():
+            overall_priority_percentages[priority] = round((count / len(df)) * 100)
+        
+        # For each region, calculate priority metrics
+        for region in regions:
+            region_data = df[df['Region'] == region]
+            region_total = len(region_data)
+            
+            if region_total == 0:
+                continue
+                
+            # Priority breakdown for this region
+            priority_counts = region_data.groupby('Priority').size().to_dict()
+            
+            # Calculate percentages and fill missing priorities
+            priority_percentages = {}
+            priority_status_counts = {}
+            
+            for priority in priorities:
+                count = priority_counts.get(priority, 0)
+                priority_percentages[priority] = round((count / region_total) * 100) if region_total > 0 else 0
+                
+                # Status breakdown for this priority in this region
+                status_counts = {}
+                priority_region_data = region_data[region_data['Priority'] == priority]
+                
+                status_counts['Solved'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Solved'])
+                status_counts['Open'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Open'])
+                status_counts['Hold'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Hold'])
+                
+                priority_status_counts[priority] = status_counts
+            
+            # Resolution time by priority for this region
+            resolved_region_data = region_data[region_data['Ticket status'] == 'Solved']
+            resolution_by_priority = {}
+            
+            for priority in priorities:
+                priority_resolved = resolved_region_data[resolved_region_data['Priority'] == priority]
+                if len(priority_resolved) > 0:
+                    avg_time = priority_resolved['Resolution Time (Days)'].mean()
+                    resolution_by_priority[priority] = round(avg_time, 1)
+                else:
+                    resolution_by_priority[priority] = "N/A"
+            
+            # Store all data for this region
+            regional_priority_data[region] = {
+                'total_tickets': region_total,
+                'priority_counts': priority_counts,
+                'priority_percentages': priority_percentages,
+                'priority_status_counts': priority_status_counts,
+                'resolution_by_priority': resolution_by_priority
+            }
+        
+        # Create comparison data for chart visualization
+        priority_comparison_data = {
+            'labels': regions,
+            'datasets': []
+        }
+        
+        # Create a dataset for each priority
+        for priority in priorities:
+            priority_data = []
+            for region in regions:
+                region_info = regional_priority_data.get(region, {})
+                count = region_info.get('priority_counts', {}).get(priority, 0)
+                priority_data.append(count)
+            
+            # Generate a color for this priority (using predefined bootstrap colors)
+            if priority in ['Critical', 'High', 'P1', '1']:
+                color = 'rgba(220, 53, 69, 0.7)'  # danger
+            elif priority in ['Medium', 'P2', '2']:
+                color = 'rgba(255, 193, 7, 0.7)'  # warning
+            elif priority in ['Low', 'P3', '3']:
+                color = 'rgba(25, 135, 84, 0.7)'  # success
+            else:
+                color = 'rgba(13, 110, 253, 0.7)'  # primary
+                
+            priority_comparison_data['datasets'].append({
+                'label': str(priority),
+                'data': priority_data,
+                'backgroundColor': color,
+                'borderColor': color,
+                'borderWidth': 1
+            })
+        
+        # Create resolution time comparison data
+        resolution_comparison_data = {
+            'labels': priorities,
+            'datasets': []
+        }
+        
+        # For each region, create a dataset of resolution times by priority
+        for region in regions:
+            resolution_data = []
+            region_info = regional_priority_data.get(region, {})
+            resolution_by_priority = region_info.get('resolution_by_priority', {})
+            
+            for priority in priorities:
+                avg_time = resolution_by_priority.get(priority, "N/A")
+                # Convert "N/A" to null for chart display
+                if avg_time == "N/A":
+                    resolution_data.append(None)
+                else:
+                    resolution_data.append(avg_time)
+            
+            # Generate a unique color for this region
+            import hashlib
+            color_seed = int(hashlib.md5(region.encode()).hexdigest(), 16) % 360
+            color = f'hsl({color_seed}, 70%, 60%)'
+                
+            resolution_comparison_data['datasets'].append({
+                'label': region,
+                'data': resolution_data,
+                'backgroundColor': color,
+                'borderColor': color,
+                'borderWidth': 2,
+                'fill': False
+            })
+        
+        return render_template(
+            'regional_priority_breakdown.html',
+            filename=filename,
+            regions=regions,
+            priorities=priorities,
+            overall_priority_counts=overall_priority_counts,
+            overall_priority_percentages=overall_priority_percentages,
+            regional_priority_data=regional_priority_data,
+            priority_comparison_data=priority_comparison_data,
+            resolution_comparison_data=resolution_comparison_data
+        )
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Error in regional priority breakdown: {str(e)}')
+        return redirect(url_for('region_analysis'))
+
 @app.route('/group_analysis')
 def group_analysis():
     filepath = session.get('filepath')

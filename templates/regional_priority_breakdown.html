@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Analysis - Regional Priority Breakdown</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            padding-top: 20px;
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.125);
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #495057;
+            font-weight: 500;
+            padding: 10px 15px;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: transparent;
+            border-bottom: 3px solid #0d6efd;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .stat-label {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .priority-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 50rem;
+            margin-right: 5px;
+        }
+        .region-card {
+            margin-bottom: 30px;
+            border-left: 5px solid #0d6efd;
+        }
+        .priority-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-icon {
+            margin-right: 8px;
+        }
+        .resolution-time-indicator {
+            width: 100%;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .resolution-time-bar {
+            height: 100%;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="position-relative">
+            <h1 class="text-center mb-3">Regional Priority Breakdown</h1>
+            <p class="text-center text-muted mb-4">File: {{ filename }}</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-warning">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('ticket_overview') }}">
+                    <i class="bi bi-house-door header-icon"></i>Overview
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('region_analysis') }}">
+                    <i class="bi bi-globe header-icon"></i>Region Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('group_analysis') }}">
+                    <i class="bi bi-people header-icon"></i>Group Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('engineer_analysis') }}">
+                    <i class="bi bi-person-badge header-icon"></i>Engineer Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('priority_analysis') }}">
+                    <i class="bi bi-exclamation-triangle header-icon"></i>Priority Analysis
+                </a>
+            </li>
+        </ul>
+
+        <!-- Back to Region Analysis button -->
+        <div class="text-start mb-4">
+            <a href="{{ url_for('region_analysis') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Region Analysis
+            </a>
+        </div>
+
+        <!-- Overall Priority Distribution -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-pie-chart header-icon"></i>Overall Priority Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <canvas id="overallPriorityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for priority, count in overall_priority_counts.items() %}
+                                    <tr>
+                                        <td>
+                                            <span class="priority-badge 
+                                                {% if priority in ['Critical', 'High', 'P1', '1'] %}bg-danger
+                                                {% elif priority in ['Medium', 'P2', '2'] %}bg-warning
+                                                {% elif priority in ['Low', 'P3', '3'] %}bg-success
+                                                {% else %}bg-primary{% endif %}">
+                                                {{ priority }}
+                                            </span>
+                                        </td>
+                                        <td>{{ count }}</td>
+                                        <td>{{ overall_priority_percentages.get(priority, 0) }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Distribution by Region Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-bar-chart header-icon"></i>Priority Distribution by Region</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="priorityByRegionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resolution Time by Priority Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-clock header-icon"></i>Resolution Time by Priority (Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="resolutionTimeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Region Priority Breakdown Cards -->
+        <h3 class="mt-5 mb-4">Regional Priority Details</h3>
+        
+        {% for region in regions %}
+        {% if regional_priority_data.get(region, {}).get('total_tickets', 0) > 0 %}
+        <div class="card region-card mb-4">
+            <div class="card-header priority-header">
+                <h5 class="card-title mb-0">{{ region }}</h5>
+                <div>
+                    <span class="badge bg-primary">
+                        Total Tickets: {{ regional_priority_data.get(region, {}).get('total_tickets', 0) }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Priority Breakdown Table -->
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Priority Breakdown</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Count</th>
+                                        <th>Open</th>
+                                        <th>Solved</th>
+                                        <th>Hold</th>
+                                        <th>Avg. Resolution</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for priority in priorities %}
+                                    {% if regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) > 0 %}
+                                    <tr>
+                                        <td>
+                                            <span class="priority-badge 
+                                                {% if priority in ['Critical', 'High', 'P1', '1'] %}bg-danger
+                                                {% elif priority in ['Medium', 'P2', '2'] %}bg-warning
+                                                {% elif priority in ['Low', 'P3', '3'] %}bg-success
+                                                {% else %}bg-primary{% endif %}">
+                                                {{ priority }}
+                                            </span>
+                                        </td>
+                                        <td>{{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }}</td>
+                                        <td>{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Open', 0) }}</td>
+                                        <td>{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Solved', 0) }}</td>
+                                        <td>{{ regional_priority_data.get(region, {}).get('priority_status_counts', {}).get(priority, {}).get('Hold', 0) }}</td>
+                                        <td>
+                                            {% set resolution_time = regional_priority_data.get(region, {}).get('resolution_by_priority', {}).get(priority, 'N/A') %}
+                                            {{ resolution_time }} {{ 'days' if resolution_time != 'N/A' else '' }}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Priority Chart -->
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Priority Distribution</h6>
+                        <div class="chart-container">
+                            <canvas id="priorityChart-{{ region|replace(' ', '-')|replace('.', '')|lower }}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <div class="text-center mt-4 mb-4">
+            <a href="{{ url_for('region_analysis') }}" class="btn btn-primary">Back to Region Analysis</a>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Overall Priority Chart
+        const overallPriorityCtx = document.getElementById('overallPriorityChart').getContext('2d');
+        const priorityLabels = [];
+        const priorityCounts = [];
+        const priorityColors = [];
+
+        {% for priority, count in overall_priority_counts.items() %}
+        priorityLabels.push("{{ priority }}");
+        priorityCounts.push({{ count }});
+        {% if priority in ['Critical', 'High', 'P1', '1'] %}
+            priorityColors.push('rgba(220, 53, 69, 0.7)');
+        {% elif priority in ['Medium', 'P2', '2'] %}
+            priorityColors.push('rgba(255, 193, 7, 0.7)');
+        {% elif priority in ['Low', 'P3', '3'] %}
+            priorityColors.push('rgba(25, 135, 84, 0.7)');
+        {% else %}
+            priorityColors.push('rgba(13, 110, 253, 0.7)');
+        {% endif %}
+        {% endfor %}
+
+        new Chart(overallPriorityCtx, {
+            type: 'pie',
+            data: {
+                labels: priorityLabels,
+                datasets: [{
+                    data: priorityCounts,
+                    backgroundColor: priorityColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12
+                        }
+                    }
+                }
+            }
+        });
+
+        // Priority by Region Chart
+        const priorityByRegionCtx = document.getElementById('priorityByRegionChart').getContext('2d');
+        const priorityComparisonData = {{ priority_comparison_data|tojson }};
+
+        new Chart(priorityByRegionCtx, {
+            type: 'bar',
+            data: priorityComparisonData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Tickets'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Priority Distribution by Region',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Resolution Time Chart
+        const resolutionTimeCtx = document.getElementById('resolutionTimeChart').getContext('2d');
+        const resolutionComparisonData = {{ resolution_comparison_data|tojson }};
+
+        new Chart(resolutionTimeCtx, {
+            type: 'line',
+            data: resolutionComparisonData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Average Resolution Time (Days)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Resolution Time by Priority Across Regions',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Individual Region Priority Charts
+        {% for region in regions %}
+        {% if regional_priority_data.get(region, {}).get('total_tickets', 0) > 0 %}
+        const regionCtx = document.getElementById('priorityChart-{{ region|replace(' ', '-')|replace('.', '')|lower }}').getContext('2d');
+        const regionPriorityLabels = [];
+        const regionPriorityCounts = [];
+        const regionPriorityColors = [];
+
+        {% for priority in priorities %}
+        {% if regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) > 0 %}
+        regionPriorityLabels.push("{{ priority }}");
+        regionPriorityCounts.push({{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }});
+        {% if priority in ['Critical', 'High', 'P1', '1'] %}
+            regionPriorityColors.push('rgba(220, 53, 69, 0.7)');
+        {% elif priority in ['Medium', 'P2', '2'] %}
+            regionPriorityColors.push('rgba(255, 193, 7, 0.7)');
+        {% elif priority in ['Low', 'P3', '3'] %}
+            regionPriorityColors.push('rgba(25, 135, 84, 0.7)');
+        {% else %}
+            regionPriorityColors.push('rgba(13, 110, 253, 0.7)');
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+
+        new Chart(regionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: regionPriorityLabels,
+                datasets: [{
+                    data: regionPriorityCounts,
+                    backgroundColor: regionPriorityColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+        {% endfor %}
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
