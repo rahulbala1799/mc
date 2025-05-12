@@ -817,6 +817,9 @@ def regional_priority_breakdown():
         df = pd.read_excel(filepath)
         df = process_ticket_data(df)
         
+        # Convert Priority column to string to avoid comparison issues
+        df['Priority'] = df['Priority'].astype(str)
+        
         # Get unique regions and priorities
         regions = sorted(df['Region'].unique())
         priorities = sorted(df['Priority'].unique())
@@ -894,15 +897,18 @@ def regional_priority_breakdown():
                 count = region_info.get('priority_counts', {}).get(priority, 0)
                 priority_data.append(count)
             
-            # Generate a color for this priority (using predefined bootstrap colors)
-            if priority in ['Critical', 'High', 'P1', '1']:
-                color = 'rgba(220, 53, 69, 0.7)'  # danger
-            elif priority in ['Medium', 'P2', '2']:
-                color = 'rgba(255, 193, 7, 0.7)'  # warning
-            elif priority in ['Low', 'P3', '3']:
-                color = 'rgba(25, 135, 84, 0.7)'  # success
+            # Generate a color for this priority based on the priority name
+            # Convert priority to lowercase for case-insensitive matching
+            priority_lower = priority.lower()
+            
+            if any(x in priority_lower for x in ['critical', 'high', 'p1', '1']):
+                color = 'rgba(220, 53, 69, 0.7)'  # danger/red
+            elif any(x in priority_lower for x in ['medium', 'normal', 'p2', '2']):
+                color = 'rgba(255, 193, 7, 0.7)'  # warning/yellow
+            elif any(x in priority_lower for x in ['low', 'p3', '3']):
+                color = 'rgba(25, 135, 84, 0.7)'  # success/green
             else:
-                color = 'rgba(13, 110, 253, 0.7)'  # primary
+                color = 'rgba(13, 110, 253, 0.7)'  # primary/blue
                 
             priority_comparison_data['datasets'].append({
                 'label': str(priority),

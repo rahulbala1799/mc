@@ -177,9 +177,9 @@
                                     <tr>
                                         <td>
                                             <span class="priority-badge 
-                                                {% if priority in ['Critical', 'High', 'P1', '1'] %}bg-danger
-                                                {% elif priority in ['Medium', 'P2', '2'] %}bg-warning
-                                                {% elif priority in ['Low', 'P3', '3'] %}bg-success
+                                                {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}bg-danger
+                                                {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}bg-warning
+                                                {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}bg-success
                                                 {% else %}bg-primary{% endif %}">
                                                 {{ priority }}
                                             </span>
@@ -257,9 +257,9 @@
                                     <tr>
                                         <td>
                                             <span class="priority-badge 
-                                                {% if priority in ['Critical', 'High', 'P1', '1'] %}bg-danger
-                                                {% elif priority in ['Medium', 'P2', '2'] %}bg-warning
-                                                {% elif priority in ['Low', 'P3', '3'] %}bg-success
+                                                {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}bg-danger
+                                                {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}bg-warning
+                                                {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}bg-success
                                                 {% else %}bg-primary{% endif %}">
                                                 {{ priority }}
                                             </span>
@@ -309,11 +309,11 @@
         {% for priority, count in overall_priority_counts.items() %}
         priorityLabels.push("{{ priority }}");
         priorityCounts.push({{ count }});
-        {% if priority in ['Critical', 'High', 'P1', '1'] %}
+        {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}
             priorityColors.push('rgba(220, 53, 69, 0.7)');
-        {% elif priority in ['Medium', 'P2', '2'] %}
+        {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}
             priorityColors.push('rgba(255, 193, 7, 0.7)');
-        {% elif priority in ['Low', 'P3', '3'] %}
+        {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}
             priorityColors.push('rgba(25, 135, 84, 0.7)');
         {% else %}
             priorityColors.push('rgba(13, 110, 253, 0.7)');
@@ -433,11 +433,11 @@
         {% if regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) > 0 %}
         regionPriorityLabels.push("{{ priority }}");
         regionPriorityCounts.push({{ regional_priority_data.get(region, {}).get('priority_counts', {}).get(priority, 0) }});
-        {% if priority in ['Critical', 'High', 'P1', '1'] %}
+        {% if 'critical' in priority|lower or 'high' in priority|lower or 'p1' in priority|lower or priority == '1' %}
             regionPriorityColors.push('rgba(220, 53, 69, 0.7)');
-        {% elif priority in ['Medium', 'P2', '2'] %}
+        {% elif 'medium' in priority|lower or 'normal' in priority|lower or 'p2' in priority|lower or priority == '2' %}
             regionPriorityColors.push('rgba(255, 193, 7, 0.7)');
-        {% elif priority in ['Low', 'P3', '3'] %}
+        {% elif 'low' in priority|lower or 'p3' in priority|lower or priority == '3' %}
             regionPriorityColors.push('rgba(25, 135, 84, 0.7)');
         {% else %}
             regionPriorityColors.push('rgba(13, 110, 253, 0.7)');
