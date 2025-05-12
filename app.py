@@ -304,22 +304,23 @@ def ticket_overview():
                 month = unique_months[idx]
                 month_date = month_dates[idx]
                 month_end = month_date + pd.offsets.MonthEnd(1)
-                
+                month_start = month_date
                 # Get all tickets created up to this month (including this month)
                 tickets_up_to_now = df[pd.to_datetime(df['Logged - Date']) <= month_end]
-                
                 # New tickets this month
                 new_tickets_this_month = df[df['Month'] == month]
                 new_count = len(new_tickets_this_month)
-                
                 # Solved tickets this month
                 solved_month_df = df[(df['Month'] == month) & (df['Ticket status'] == 'Solved')]
                 solved_count = len(solved_month_df)
-                
-                # For backlog, use the same definition as current_backlog:
-                # Tickets without a solved date that were created on or before this month's end
-                backlog_df = tickets_up_to_now[tickets_up_to_now['Ticket solved - Date'].isna()]
-                
+                # --- UPDATED BACKLOG LOGIC ---
+                # Backlog: tickets logged on or before this month, and either not solved, or solved after this month
+                # Exclude tickets solved in this month or earlier
+                backlog_df = tickets_up_to_now[
+                    (tickets_up_to_now['Ticket solved - Date'].isna()) |
+                    (pd.to_datetime(tickets_up_to_now['Ticket solved - Date']) > month_end)
+                ]
+                # --- END UPDATED LOGIC ---
                 # If this is the last month (most recent), verify it matches current_backlog
                 if idx == sorted_month_indices[-1]:
                     current_backlog_count = len(df[df['Ticket solved - Date'].isna()])
@@ -328,12 +329,9 @@ def ticket_overview():
                     if current_backlog_count != len(backlog_df):
                         print(f"WARNING: Backlog count mismatch! Fixing...")
                         backlog_df = df[df['Ticket solved - Date'].isna()]
-                
                 backlog_count = len(backlog_df)
-                
                 # Debug print for backlog calculation
                 print(f"DEBUG: Month {month}: Backlog count = {backlog_count}, New tickets = {new_count}, Solved tickets = {solved_count}")
-                
                 # Get priority breakdown for backlog
                 priority_breakdown = {}
                 if not backlog_df.empty and 'Priority' in backlog_df.columns:
@@ -341,7 +339,6 @@ def ticket_overview():
                     for priority, count in priority_counts.items():
                         if pd.notna(priority):  # Skip NaN priorities
                             priority_breakdown[str(priority)] = count
-                
                 # Get region breakdown for backlog
                 region_breakdown = {}
                 if not backlog_df.empty and 'Region' in backlog_df.columns:
@@ -349,11 +346,9 @@ def ticket_overview():
                     for region, count in region_counts.items():
                         if pd.notna(region):  # Skip NaN regions
                             region_breakdown[str(region)] = count
-                
                 # Debug for priority and region breakdown
                 print(f"DEBUG: Month {month} priority breakdown: {priority_breakdown}")
                 print(f"DEBUG: Month {month} region breakdown: {region_breakdown}")
-                
                 # Save data for this month
                 backlog_data['labels'].append(month)
                 backlog_data['backlog_count'].append(backlog_count)
