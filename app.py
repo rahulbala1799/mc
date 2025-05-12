@@ -35,6 +35,10 @@ def process_ticket_data(df):
     # Fill NaN regions with 'Unknown'
     df['Region'] = df['Region'].fillna('Unknown')
     
+    # Ensure Priority is always a string to avoid comparison issues
+    if 'Priority' in df.columns:
+        df['Priority'] = df['Priority'].astype(str)
+    
     return df
 
 def calculate_resolution_metrics(df):
@@ -723,6 +727,10 @@ def region_analysis():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
+        
+        # Convert Priority column to string to avoid comparison issues
+        df['Priority'] = df['Priority'].astype(str)
+        
         df = process_ticket_data(df)
         
         # Get sorted list of regions
@@ -915,10 +923,11 @@ def regional_priority_breakdown():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
-        df = process_ticket_data(df)
         
         # Convert Priority column to string to avoid comparison issues
         df['Priority'] = df['Priority'].astype(str)
+        
+        df = process_ticket_data(df)
         
         # Get unique regions and priorities
         regions = sorted(df['Region'].unique())
@@ -1199,6 +1208,10 @@ def group_analysis():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
+        
+        # Convert Priority column to string to avoid comparison issues
+        df['Priority'] = df['Priority'].astype(str)
+        
         df = process_ticket_data(df)
         
         # Group analysis
@@ -1245,6 +1258,7 @@ def group_analysis():
         )
         
     except Exception as e:
+        traceback.print_exc()
         flash(f'Error in group analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
 
@@ -1263,6 +1277,10 @@ def engineer_analysis():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
+        
+        # Convert Priority column to string to avoid comparison issues
+        df['Priority'] = df['Priority'].astype(str)
+        
         df = process_ticket_data(df)
         
         # Engineer analysis
@@ -1309,6 +1327,7 @@ def engineer_analysis():
         )
         
     except Exception as e:
+        traceback.print_exc()
         flash(f'Error in engineer analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
 
@@ -1327,6 +1346,10 @@ def priority_analysis():
     try:
         # Load and process ticket data
         df = pd.read_excel(filepath)
+        
+        # Convert Priority column to string to avoid comparison issues
+        df['Priority'] = df['Priority'].astype(str)
+        
         df = process_ticket_data(df)
         
         # Priority analysis
@@ -1373,6 +1396,7 @@ def priority_analysis():
         )
         
     except Exception as e:
+        traceback.print_exc()
         flash(f'Error in priority analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
 
