@@ -831,9 +831,21 @@ def regional_priority_breakdown():
         page = request.args.get('page', 1, type=int)
         per_page = 20  # Show 20 tickets per page
         
-        # Prepare detailed resolved tickets data for the table
-        solved_tickets = df[df['Ticket status'] == 'Solved'].copy()
+        # Ensure 'Ticket status' is handled in a case-insensitive way and trim whitespace
+        df['Ticket status'] = df['Ticket status'].astype(str).str.strip()
+        
+        # Debug: Print unique ticket statuses to understand what values exist
+        unique_statuses = df['Ticket status'].unique()
+        print(f"DEBUG: Unique ticket statuses found in dataset: {unique_statuses}")
+        
+        # Filter tickets based on exact 'Solved' status
+        solved_tickets = df[df['Ticket status'].str.lower() == 'solved'].copy()
         total_solved = len(solved_tickets)
+        print(f"DEBUG: Total solved tickets (case-insensitive match): {total_solved}")
+        
+        # Also check case-sensitive count for comparison
+        exact_solved = len(df[df['Ticket status'] == 'Solved'])
+        print(f"DEBUG: Total solved tickets (exact case match): {exact_solved}")
         
         # Sort by resolution time (descending) to show longest first
         solved_tickets = solved_tickets.sort_values('Resolution Time (Days)', ascending=False)
@@ -873,9 +885,9 @@ def regional_priority_breakdown():
             
             # Calculate status percentages for each priority
             priority_df = df[df['Priority'] == priority]
-            solved_count = len(priority_df[priority_df['Ticket status'] == 'Solved'])
-            open_count = len(priority_df[priority_df['Ticket status'] == 'Open'])
-            hold_count = len(priority_df[priority_df['Ticket status'] == 'Hold'])
+            solved_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'solved'])
+            open_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'open'])
+            hold_count = len(priority_df[priority_df['Ticket status'].str.lower() == 'hold'])
             
             # Store percentages
             priority_status_percentages[priority] = {
@@ -907,14 +919,14 @@ def regional_priority_breakdown():
                 status_counts = {}
                 priority_region_data = region_data[region_data['Priority'] == priority]
                 
-                status_counts['Solved'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Solved'])
-                status_counts['Open'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Open'])
-                status_counts['Hold'] = len(priority_region_data[priority_region_data['Ticket status'] == 'Hold'])
+                status_counts['Solved'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'solved'])
+                status_counts['Open'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'open'])
+                status_counts['Hold'] = len(priority_region_data[priority_region_data['Ticket status'].str.lower() == 'hold'])
                 
                 priority_status_counts[priority] = status_counts
             
             # Resolution time by priority for this region
-            resolved_region_data = region_data[region_data['Ticket status'] == 'Solved']
+            resolved_region_data = region_data[region_data['Ticket status'].str.lower() == 'solved']
             resolution_by_priority = {}
             
             for priority in priorities:
