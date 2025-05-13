@@ -154,22 +154,25 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('ticket_overview') }}">Overview</a>
+                <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">Overview</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('region_analysis') }}">Region Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'region_analysis' %}active{% endif %}" href="{{ url_for('region_analysis') }}">Region Analysis</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('group_analysis') }}">Group Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'group_analysis' %}active{% endif %}" href="{{ url_for('group_analysis') }}">Group Analysis</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('engineer_analysis') }}">Engineer Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'engineer_analysis' %}active{% endif %}" href="{{ url_for('engineer_analysis') }}">Engineer Analysis</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for('priority_analysis') }}">Priority Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'priority_analysis' %}active{% endif %}" href="{{ url_for('priority_analysis') }}">Priority Analysis</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'jira_id_analysis' %}active{% endif %}" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">Backlog Analysis</a>
             </li>
         </ul>
 

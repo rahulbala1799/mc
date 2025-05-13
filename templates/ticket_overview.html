@@ -126,32 +126,37 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for('ticket_overview') }}">
+                <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">
                     <i class="bi bi-house-door header-icon"></i>Overview
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('region_analysis') }}">
+                <a class="nav-link {% if request.endpoint == 'region_analysis' %}active{% endif %}" href="{{ url_for('region_analysis') }}">
                     <i class="bi bi-globe header-icon"></i>Region Analysis
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('group_analysis') }}">
+                <a class="nav-link {% if request.endpoint == 'group_analysis' %}active{% endif %}" href="{{ url_for('group_analysis') }}">
                     <i class="bi bi-people header-icon"></i>Group Analysis
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('engineer_analysis') }}">
+                <a class="nav-link {% if request.endpoint == 'engineer_analysis' %}active{% endif %}" href="{{ url_for('engineer_analysis') }}">
                     <i class="bi bi-person-badge header-icon"></i>Engineer Analysis
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('priority_analysis') }}">
+                <a class="nav-link {% if request.endpoint == 'priority_analysis' %}active{% endif %}" href="{{ url_for('priority_analysis') }}">
                     <i class="bi bi-exclamation-triangle header-icon"></i>Priority Analysis
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
+                <a class="nav-link {% if request.endpoint == 'jira_id_analysis' %}active{% endif %}" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">
+                    <i class="fas fa-chart-line header-icon"></i>Backlog Analysis
+                </a>
             </li>
         </ul>
 
