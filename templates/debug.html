@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Debug Information</h1>
+    
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">Session Data</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="200">Filepath</th>
+                            <td>{{ debug_data.session.filepath }}</td>
+                        </tr>
+                        <tr>
+                            <th>Filename</th>
+                            <td>{{ debug_data.session.filename }}</td>
+                        </tr>
+                        <tr>
+                            <th>Is Ticket Data</th>
+                            <td>{{ debug_data.session.is_ticket_data }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="m-0 font-weight-bold">Persistence Data</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert {{ 'alert-success' if debug_data.persistence.last_upload_exists else 'alert-danger' }}">
+                        Last Upload File: {{ 'Exists' if debug_data.persistence.last_upload_exists else 'Not Found' }}
+                    </div>
+                    
+                    {% if debug_data.persistence.last_upload_content %}
+                    <div class="card bg-light mb-3">
+                        <div class="card-header">Last Upload Content</div>
+                        <div class="card-body">
+                            <pre>{{ debug_data.persistence.last_upload_content }}</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-warning text-white">
+                    <h6 class="m-0 font-weight-bold">File Data</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert {{ 'alert-success' if debug_data.files.file_exists else 'alert-danger' }}">
+                        Current File: {{ 'Exists' if debug_data.files.file_exists else 'Not Found' }}
+                    </div>
+                    
+                    <div class="card bg-light mb-3">
+                        <div class="card-header">Uploaded Files ({{ debug_data.files.uploaded_files|length }})</div>
+                        <div class="card-body">
+                            <ul class="list-group">
+                                {% for file in debug_data.files.uploaded_files %}
+                                <li class="list-group-item">{{ file }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold">System Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="200">Platform</th>
+                            <td>{{ debug_data.system.platform }}</td>
+                        </tr>
+                        <tr>
+                            <th>Python Version</th>
+                            <td>{{ debug_data.system.python_version }}</td>
+                        </tr>
+                        <tr>
+                            <th>Working Directory</th>
+                            <td>{{ debug_data.system.working_directory }}</td>
+                        </tr>
+                        <tr>
+                            <th>Upload Folder</th>
+                            <td>{{ debug_data.system.app_config_upload_folder }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12 text-center mt-3 mb-5">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+            <a href="{{ url_for('ticket_overview') }}" class="btn btn-info">Ticket Overview</a>
+            <a href="{{ url_for('backlog_analysis') }}" class="btn btn-warning">Backlog Analysis</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

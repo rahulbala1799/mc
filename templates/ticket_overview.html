@@ -124,41 +124,51 @@
         {% endwith %}
 
         <!-- Navigation Tabs -->
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">
-                    <i class="bi bi-house-door header-icon"></i>Overview
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'region_analysis' %}active{% endif %}" href="{{ url_for('region_analysis') }}">
-                    <i class="bi bi-globe header-icon"></i>Region Analysis
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'group_analysis' %}active{% endif %}" href="{{ url_for('group_analysis') }}">
-                    <i class="bi bi-people header-icon"></i>Group Analysis
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'engineer_analysis' %}active{% endif %}" href="{{ url_for('engineer_analysis') }}">
-                    <i class="bi bi-person-badge header-icon"></i>Engineer Analysis
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'priority_analysis' %}active{% endif %}" href="{{ url_for('priority_analysis') }}">
-                    <i class="bi bi-exclamation-triangle header-icon"></i>Priority Analysis
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'jira_id_analysis' %}active{% endif %}" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">
-                    <i class="fas fa-chart-line header-icon"></i>Backlog Analysis
-                </a>
-            </li>
-        </ul>
+        <div class="mb-4">
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">
+                        <i class="bi bi-house-door header-icon"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'region_analysis' %}active{% endif %}" href="{{ url_for('region_analysis') }}">
+                        <i class="bi bi-globe header-icon"></i>Region Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'group_analysis' %}active{% endif %}" href="{{ url_for('group_analysis') }}">
+                        <i class="bi bi-people header-icon"></i>Group Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'engineer_analysis' %}active{% endif %}" href="{{ url_for('engineer_analysis') }}">
+                        <i class="bi bi-person-badge header-icon"></i>Engineer Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'priority_analysis' %}active{% endif %}" href="{{ url_for('priority_analysis') }}">
+                        <i class="bi bi-exclamation-triangle header-icon"></i>Priority Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'jira_id_analysis' %}active{% endif %}" href="{{ url_for('jira_id_analysis') }}">JIRA ID Analysis</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">
+                        <i class="fas fa-chart-line header-icon"></i>Backlog Analysis
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Direct Access Button to Backlog Analysis -->
+        <div class="text-center mb-4">
+            <a href="{{ url_for('backlog_analysis') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-hourglass-split mr-2"></i> Open Backlog Analysis
+            </a>
+            <p class="text-muted mt-2">Direct access button for backlog analysis page</p>
+        </div>
 
         <!-- Summary Stats -->
         <div class="row mb-4">

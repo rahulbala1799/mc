@@ -8,6 +8,7 @@ import io
 import tempfile
 import traceback
 import backlog_utils  # Import the new backlog utilities module
+import sys
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-12345')
@@ -78,6 +79,38 @@ def calculate_resolution_metrics(df):
     
     return metrics
 
+def recover_session():
+    """Helper function to recover session data from persistent storage."""
+    try:
+        # First try to read from .last_upload file
+        last_upload_path = os.path.join(app.config['UPLOAD_FOLDER'], '.last_upload')
+        if os.path.exists(last_upload_path):
+            with open(last_upload_path, 'r') as f:
+                lines = f.readlines()
+                if len(lines) >= 2:
+                    filepath = lines[0].strip()
+                    filename = lines[1].strip()
+                    
+                    if os.path.exists(filepath):
+                        print(f"Recovered session from .last_upload: {filepath}")
+                        return filepath, filename
+        
+        # Fallback to finding most recent file
+        upload_dir = app.config['UPLOAD_FOLDER']
+        files = [os.path.join(upload_dir, f) for f in os.listdir(upload_dir) 
+                if os.path.isfile(os.path.join(upload_dir, f)) and not f.startswith('.')]
+        
+        if files:
+            # Get most recent file by modification time
+            filepath = max(files, key=os.path.getmtime)
+            filename = os.path.basename(filepath)
+            print(f"Recovered session from most recent file: {filepath}")
+            return filepath, filename
+    except Exception as e:
+        print(f"Error recovering session: {str(e)}")
+    
+    return None, None
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -99,8 +132,21 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
+        # Set session variables
         session['filepath'] = filepath
         session['filename'] = filename
+        
+        # Add additional persistence for Railway environment
+        try:
+            # Create a .last_upload file with filepath information
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], '.last_upload'), 'w') as f:
+                f.write(f"{filepath}\n{filename}")
+            print(f"Created persistent upload record at {os.path.join(app.config['UPLOAD_FOLDER'], '.last_upload')}")
+        except Exception as e:
+            print(f"Warning: Could not create persistent upload record: {str(e)}")
+        
+        # Force session save
+        session.modified = True
         
         # Try to detect if it's ticket data
         try:
@@ -187,9 +233,21 @@ def ticket_overview():
     filepath = session.get('filepath')
     filename = session.get('filename')
     
+    # Session recovery handling
     if not filepath or not os.path.exists(filepath):
-        flash('Please upload a file first')
-        return redirect(url_for('index'))
+        print("WARNING: File does not exist or filepath not in session for ticket_overview")
+        
+        # Try to restore session
+        filepath, filename = recover_session()
+        if filepath and filename:
+            # Restore session
+            session['filepath'] = filepath
+            session['filename'] = filename
+            session.modified = True
+        else:
+            print("No uploaded files found")
+            flash('Please upload a file first')
+            return redirect(url_for('index'))
     
     try:
         # Load and process ticket data
@@ -1969,10 +2027,21 @@ def backlog_analysis():
     print(f"Filepath: {filepath}")
     print(f"Filename: {filename}")
     
+    # Direct access handling - if coming from ticket_overview but session lost
     if not filepath or not os.path.exists(filepath):
-        print("ERROR: File does not exist or filepath not in session")
-        flash('Please upload a file first')
-        return redirect(url_for('index'))
+        print("WARNING: File does not exist or filepath not in session")
+        
+        # Try to restore session
+        filepath, filename = recover_session()
+        if filepath and filename:
+            # Restore session
+            session['filepath'] = filepath
+            session['filename'] = filename
+            session.modified = True
+        else:
+            print("No uploaded files found")
+            flash('Please upload a file first')
+            return redirect(url_for('index'))
     
     try:
         # Load and process ticket data
@@ -2156,6 +2225,63 @@ def backlog_analysis():
         traceback.print_exc()
         flash(f'Error in backlog analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))
+
+@app.route('/debug_session')
+def debug_session():
+    """Debug route to check session and file status"""
+    # Get session data
+    filepath = session.get('filepath')
+    filename = session.get('filename')
+    is_ticket_data = session.get('is_ticket_data', False)
+    
+    # Check for persistence file
+    last_upload_path = os.path.join(app.config['UPLOAD_FOLDER'], '.last_upload')
+    last_upload_exists = os.path.exists(last_upload_path)
+    last_upload_content = None
+    if last_upload_exists:
+        try:
+            with open(last_upload_path, 'r') as f:
+                last_upload_content = f.read()
+        except:
+            last_upload_content = "Error reading file"
+    
+    # Check upload directory
+    upload_dir = app.config['UPLOAD_FOLDER']
+    uploaded_files = []
+    try:
+        uploaded_files = [f for f in os.listdir(upload_dir) if os.path.isfile(os.path.join(upload_dir, f))]
+    except Exception as e:
+        uploaded_files = [f"Error listing files: {str(e)}"]
+    
+    # Check if the filepath exists
+    file_exists = filepath and os.path.exists(filepath)
+    
+    # System info
+    sys_info = {
+        'platform': sys.platform,
+        'python_version': sys.version,
+        'working_directory': os.getcwd(),
+        'app_config_upload_folder': app.config['UPLOAD_FOLDER']
+    }
+    
+    debug_data = {
+        'session': {
+            'filepath': filepath,
+            'filename': filename,
+            'is_ticket_data': is_ticket_data
+        },
+        'persistence': {
+            'last_upload_exists': last_upload_exists,
+            'last_upload_content': last_upload_content
+        },
+        'files': {
+            'file_exists': file_exists,
+            'uploaded_files': uploaded_files
+        },
+        'system': sys_info
+    }
+    
+    return render_template('debug.html', debug_data=debug_data)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
