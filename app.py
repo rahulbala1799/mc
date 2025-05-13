@@ -2002,6 +2002,9 @@ def backlog_analysis():
             for idx in df.index[df['Ticket ID'].isnull()]:
                 df.loc[idx, 'Ticket ID'] = f'UNKNOWN-{idx}'
         
+        # Extra safe - handle all data types for Ticket ID
+        df['Ticket ID'] = df['Ticket ID'].astype(str)
+        
         # Use the dedicated module to prepare all backlog analysis data
         try:
             print("Calling backlog_utils.prepare_backlog_analysis()...")
@@ -2010,8 +2013,43 @@ def backlog_analysis():
         except TypeError as type_error:
             print(f"TypeError in prepare_backlog_analysis: {str(type_error)}")
             traceback.print_exc()
-            # Re-raise to be caught by the outer exception handler
-            raise
+            # Create a minimal fallback dataset instead of re-raising
+            backlog_data = {
+                'backlog_age_data': {'labels': ['< 7 days', '7-14 days', '14-30 days', '30-60 days', '> 60 days'], 'counts': [0, 0, 0, 0, 0]},
+                'avg_age': 0,
+                'max_age': 0,
+                'priority_data': {'labels': [], 'data': [], 'percentages': {}},
+                'region_data': {'labels': [], 'data': [], 'percentages': {}},
+                'group_data': {'labels': [], 'data': [], 'percentages': {}},
+                'total_backlog': 0,
+                'backlog_trend_data': {'labels': ['Current Month'], 'backlog_count': [0], 'new_tickets': [0], 'solved_tickets': [0], 'monthly_change': [0], 'monthly_change_pct': [0]},
+                'assignee_data': {'labels': [], 'data': []},
+                'assignee_priority_data': {},
+                'jira_data': {'labels': ['With JIRA ID', 'No JIRA ID'], 'data': [0, 0]},
+                'with_jira_count': 0,
+                'no_jira_count': 0,
+                'with_jira_pct': 0,
+                'no_jira_pct': 0,
+                'high_priority_count': 0,
+                'aging_high_priority_count': 0,
+                'risk_percentage': 0,
+                'aging_percentage': 0,
+                'high_risk_tickets': [],
+                'current_backlog_count': 0,
+                'avg_monthly_resolution': 0,
+                'months_to_clear': 0,
+                'weeks_to_clear': 0,
+                'error': str(type_error)
+            }
+        except Exception as e:
+            print(f"Other exception in prepare_backlog_analysis: {str(e)}")
+            traceback.print_exc()
+            # Create minimal dataset with error info
+            backlog_data = {
+                'total_backlog': 0,
+                'backlog_age_data': {'labels': [], 'counts': []},
+                'error': str(e)
+            }
         
         # Make sure all lists are properly formatted for the template
         import json
