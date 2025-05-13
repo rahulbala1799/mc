@@ -1963,18 +1963,134 @@ def backlog_analysis():
     filepath = session.get('filepath')
     filename = session.get('filename')
     
+    print("\n\n====== BACKLOG ANALYSIS ROUTE CALLED ======")
+    print(f"Filepath: {filepath}")
+    print(f"Filename: {filename}")
+    
     if not filepath or not os.path.exists(filepath):
+        print("ERROR: File does not exist or filepath not in session")
         flash('Please upload a file first')
         return redirect(url_for('index'))
     
     try:
         # Load and process ticket data
+        print("Loading Excel file...")
         df = pd.read_excel(filepath)
+        print(f"Excel loaded. Shape: {df.shape}")
+        
+        print("Processing ticket data...")
         df = process_ticket_data(df)
+        print(f"Ticket data processed. Shape: {df.shape}")
+        
+        # For debugging, print a sample of the dataframe
+        print("Sample data (first 3 rows):")
+        print(df.head(3))
+        
+        print("Required columns check:")
+        required_columns = ['Ticket ID', 'Logged - Date', 'Ticket status', 'Region', 
+                          'Assignee name', 'Level 3 Group', 'Ticket solved - Date', 'Priority']
+        for col in required_columns:
+            print(f"  - {col}: {'PRESENT' if col in df.columns else 'MISSING'}")
         
         # Use the dedicated module to prepare all backlog analysis data
+        print("Calling backlog_utils.prepare_backlog_analysis()...")
         backlog_data = backlog_utils.prepare_backlog_analysis(df)
+        print("backlog_data prepared successfully")
         
+        # Make sure all lists are properly formatted for the template
+        import json
+        
+        # Enhanced function to safely convert any data structure to a valid JSON serializable form
+        def ensure_serializable(obj):
+            if isinstance(obj, (pd.DataFrame, pd.Series)):
+                return obj.to_dict()
+            elif isinstance(obj, pd.Index):
+                return obj.tolist()  # Convert Index objects to lists
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, dict):
+                return {str(k): ensure_serializable(v) for k, v in obj.items()}  # Ensure keys are strings
+            elif isinstance(obj, (list, tuple)):
+                return [ensure_serializable(item) for item in obj]
+            elif pd.isna(obj):
+                return None
+            return obj
+            
+        # Special post-processing for problematic data structures
+        for field in ['priority_data', 'region_data', 'group_data']:
+            if field in backlog_data and 'percentages' in backlog_data[field]:
+                # Convert any non-string dictionary keys to strings
+                backlog_data[field]['percentages'] = {
+                    str(k): v for k, v in backlog_data[field]['percentages'].items()
+                }
+        
+        # Check that the backlog data contains all required fields
+        required_fields = [
+            'backlog_age_data', 'avg_age', 'max_age', 'priority_data', 
+            'region_data', 'group_data', 'total_backlog', 'backlog_trend_data',
+            'assignee_data', 'jira_data', 'high_priority_count', 
+            'aging_high_priority_count', 'high_risk_tickets'
+        ]
+        
+        for field in required_fields:
+            if field not in backlog_data:
+                print(f"WARNING: Missing required field '{field}' in backlog_data")
+                # Set a default empty value based on the field type
+                if field in ['avg_age', 'max_age', 'total_backlog', 'high_priority_count', 'aging_high_priority_count']:
+                    backlog_data[field] = 0
+                elif field == 'high_risk_tickets':
+                    backlog_data[field] = []
+                else:
+                    backlog_data[field] = {'labels': [], 'data': []}
+                    
+        # Check the backlog_trend_data which is used for determining trend direction
+        if 'backlog_trend_data' in backlog_data:
+            if 'monthly_change' not in backlog_data['backlog_trend_data'] or not backlog_data['backlog_trend_data']['monthly_change']:
+                backlog_data['backlog_trend_data']['monthly_change'] = [0]
+        
+        # Ensure all data is safe for JSON serialization
+        backlog_data = ensure_serializable(backlog_data)
+        
+        # Final check - make sure all the data can be converted to JSON
+        try:
+            # Test JSON serialization to catch any remaining issues
+            json.dumps(backlog_data)
+            print("JSON serialization test passed")
+        except TypeError as e:
+            print(f"JSON serialization error: {str(e)}")
+            # Create a minimal safe dataset
+            backlog_data = {
+                'backlog_age_data': {'labels': ['< 7 days', '7-14 days', '14-30 days', '30-60 days', '> 60 days'], 'counts': [0, 0, 0, 0, 0]},
+                'avg_age': 0,
+                'max_age': 0,
+                'priority_data': {'labels': [], 'data': [], 'percentages': {}},
+                'region_data': {'labels': [], 'data': [], 'percentages': {}},
+                'group_data': {'labels': [], 'data': [], 'percentages': {}},
+                'total_backlog': 0,
+                'backlog_trend_data': {'labels': ['Current Month'], 'backlog_count': [0], 'new_tickets': [0], 'solved_tickets': [0], 'monthly_change': [0], 'monthly_change_pct': [0]},
+                'assignee_data': {'labels': [], 'data': []},
+                'assignee_priority_data': {},
+                'jira_data': {'labels': ['With JIRA ID', 'No JIRA ID'], 'data': [0, 0]},
+                'with_jira_count': 0,
+                'no_jira_count': 0,
+                'with_jira_pct': 0,
+                'no_jira_pct': 0,
+                'high_priority_count': 0,
+                'aging_high_priority_count': 0,
+                'risk_percentage': 0,
+                'aging_percentage': 0,
+                'high_risk_tickets': [],
+                'current_backlog_count': 0,
+                'avg_monthly_resolution': 0,
+                'months_to_clear': 0,
+                'weeks_to_clear': 0
+            }
+        
+        print("Rendering template...")
         return render_template(
             'backlog_analysis.html',
             filename=filename,
@@ -1982,7 +2098,7 @@ def backlog_analysis():
         )
         
     except Exception as e:
-        print(f"Error in backlog analysis: {str(e)}")
+        print(f"ERROR in backlog analysis route: {str(e)}")
         traceback.print_exc()
         flash(f'Error in backlog analysis: {str(e)}')
         return redirect(url_for('ticket_overview'))

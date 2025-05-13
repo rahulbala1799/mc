@@ -7,7 +7,7 @@ def calculate_backlog_age_distribution(df):
     """Calculate age distribution of backlog tickets."""
     try:
         # Get current backlog (tickets without solved date)
-        current_backlog = df[df['Ticket solved - Date'].isna()]
+        current_backlog = df[df['Ticket solved - Date'].isna()].copy()  # Use copy to avoid SettingWithCopyWarning
         
         # Calculate age of tickets in days
         current_date = pd.Timestamp.today()
@@ -72,7 +72,7 @@ def calculate_backlog_composition(df):
     """Calculate backlog composition by priority, region, and group."""
     try:
         # Get current backlog
-        current_backlog = df[df['Ticket solved - Date'].isna()]
+        current_backlog = df[df['Ticket solved - Date'].isna()].copy()  # Use copy to avoid SettingWithCopyWarning
         total_backlog = len(current_backlog)
         
         # Empty result dictionaries
@@ -89,9 +89,9 @@ def calculate_backlog_composition(df):
             # Calculate percentages
             for priority, count in zip(priority_data['labels'], priority_data['data']):
                 if total_backlog > 0:
-                    priority_data['percentages'][priority] = round((count / total_backlog) * 100)
+                    priority_data['percentages'][str(priority)] = round((count / total_backlog) * 100)  # Convert index to string
                 else:
-                    priority_data['percentages'][priority] = 0
+                    priority_data['percentages'][str(priority)] = 0  # Convert index to string
         
         # Region distribution
         if not current_backlog.empty and 'Region' in current_backlog.columns:
@@ -102,9 +102,9 @@ def calculate_backlog_composition(df):
             # Calculate percentages
             for region, count in zip(region_data['labels'], region_data['data']):
                 if total_backlog > 0:
-                    region_data['percentages'][region] = round((count / total_backlog) * 100)
+                    region_data['percentages'][str(region)] = round((count / total_backlog) * 100)  # Convert index to string
                 else:
-                    region_data['percentages'][region] = 0
+                    region_data['percentages'][str(region)] = 0  # Convert index to string
         
         # Group distribution
         if not current_backlog.empty and 'Level 3 Group' in current_backlog.columns:
@@ -115,9 +115,9 @@ def calculate_backlog_composition(df):
             # Calculate percentages
             for group, count in zip(group_data['labels'], group_data['data']):
                 if total_backlog > 0:
-                    group_data['percentages'][group] = round((count / total_backlog) * 100)
+                    group_data['percentages'][str(group)] = round((count / total_backlog) * 100)  # Convert index to string
                 else:
-                    group_data['percentages'][group] = 0
+                    group_data['percentages'][str(group)] = 0  # Convert index to string
         
         return priority_data, region_data, group_data, total_backlog
     
@@ -146,7 +146,15 @@ def calculate_backlog_trend(df):
         unique_months = sorted(df_sorted['Month'].dropna().unique().tolist())
         
         if not unique_months:
-            raise ValueError("No valid months found for backlog analysis")
+            print("WARNING: No valid months found for backlog analysis, using fallback data")
+            return {
+                'labels': ['Current Month'],
+                'backlog_count': [0],
+                'new_tickets': [0],
+                'solved_tickets': [0],
+                'monthly_change': [0],
+                'monthly_change_pct': [0]
+            }
         
         # Initialize backlog tracking
         backlog_data = {
@@ -213,6 +221,17 @@ def calculate_backlog_trend(df):
                     pct_change = 0
                 backlog_data['monthly_change_pct'].append(pct_change)
         
+        # Make sure we have at least one entry to prevent template errors
+        if not backlog_data['labels']:
+            backlog_data = {
+                'labels': ['Current Month'],
+                'backlog_count': [0],
+                'new_tickets': [0],
+                'solved_tickets': [0],
+                'monthly_change': [0],
+                'monthly_change_pct': [0]
+            }
+            
         return backlog_data
         
     except Exception as e:
@@ -277,7 +296,7 @@ def calculate_jira_backlog(df):
             return {}, 0, 0, 0, 0
         
         # Get current backlog
-        current_backlog = df[df['Ticket solved - Date'].isna()]
+        current_backlog = df[df['Ticket solved - Date'].isna()].copy()  # Use copy to avoid SettingWithCopyWarning
         
         # Clean up JIRA ID column
         current_backlog['JIRA ID'] = current_backlog[jira_id_column].astype(str).str.strip()
@@ -313,7 +332,7 @@ def calculate_risk_assessment(df):
     """Identify high-risk tickets in the backlog."""
     try:
         # Get current backlog
-        current_backlog = df[df['Ticket solved - Date'].isna()]
+        current_backlog = df[df['Ticket solved - Date'].isna()].copy()  # Use copy to avoid SettingWithCopyWarning
         
         # Calculate age of tickets in days
         current_date = pd.Timestamp.today()
@@ -350,12 +369,12 @@ def calculate_risk_assessment(df):
         
         for _, ticket in oldest_high_priority.iterrows():
             high_risk_tickets.append({
-                'ticket_id': ticket.get('Ticket ID', 'N/A'),
-                'priority': ticket.get('Priority', 'N/A'),
+                'ticket_id': str(ticket.get('Ticket ID', 'N/A')),  # Convert to string
+                'priority': str(ticket.get('Priority', 'N/A')),    # Convert to string
                 'age_days': int(ticket.get('age_days', 0)),
-                'region': ticket.get('Region', 'N/A'),
-                'assignee': ticket.get('Assignee name', 'N/A'),
-                'group': ticket.get('Level 3 Group', 'N/A')
+                'region': str(ticket.get('Region', 'N/A')),        # Convert to string
+                'assignee': str(ticket.get('Assignee name', 'N/A')),  # Convert to string
+                'group': str(ticket.get('Level 3 Group', 'N/A'))   # Convert to string
             })
         
         return high_priority_count, aging_high_priority_count, risk_percentage, aging_percentage, high_risk_tickets
@@ -413,47 +432,102 @@ def calculate_resolution_projection(df):
 
 def prepare_backlog_analysis(df):
     """Prepare all data needed for the backlog analysis page."""
-    # Ensure data is processed
-    if 'Resolution Time (Days)' not in df.columns:
-        # Calculate resolution time in days
-        df['Resolution Time (Days)'] = (pd.to_datetime(df['Ticket solved - Date']) - 
+    print("\n\n====== STARTING BACKLOG ANALYSIS ======")
+    print(f"DataFrame shape: {df.shape}, columns: {df.columns.tolist()}")
+    try:
+        # Ensure data is processed
+        if 'Resolution Time (Days)' not in df.columns:
+            # Calculate resolution time in days
+            df['Resolution Time (Days)'] = (pd.to_datetime(df['Ticket solved - Date']) - 
                                         pd.to_datetime(df['Logged - Date'])).dt.total_seconds() / (24 * 60 * 60)
+        
+        # Run all analyses
+        print("Calculating backlog age distribution...")
+        backlog_age_data, avg_age, max_age = calculate_backlog_age_distribution(df)
+        print(f"Backlog age data: {len(backlog_age_data['labels'])} buckets")
+        
+        print("Calculating backlog composition...")
+        priority_data, region_data, group_data, total_backlog = calculate_backlog_composition(df)
+        print(f"Total backlog: {total_backlog}")
+        
+        print("Calculating backlog trend...")
+        backlog_trend_data = calculate_backlog_trend(df)
+        print(f"Trend data: {len(backlog_trend_data['labels'])} time periods")
+        
+        print("Calculating assignee backlog...")
+        assignee_data, assignee_priority_data = calculate_assignee_backlog(df)
+        print(f"Assignee data: {len(assignee_data['labels'])} engineers")
+        
+        print("Calculating JIRA backlog...")
+        jira_data, with_jira_count, no_jira_count, with_jira_pct, no_jira_pct = calculate_jira_backlog(df)
+        print(f"JIRA data: {with_jira_count} with JIRA, {no_jira_count} without")
+        
+        print("Calculating risk assessment...")
+        high_priority_count, aging_high_priority_count, risk_percentage, aging_percentage, high_risk_tickets = calculate_risk_assessment(df)
+        print(f"Risk assessment: {high_priority_count} high priority, {aging_high_priority_count} aging")
+        
+        print("Calculating resolution projection...")
+        current_backlog_count, avg_monthly_resolution, months_to_clear, weeks_to_clear = calculate_resolution_projection(df)
+        print(f"Resolution projection: {months_to_clear} months to clear at {avg_monthly_resolution} tickets/month")
+        
+        # Compile all data into a single dictionary
+        backlog_analysis = {
+            'backlog_age_data': backlog_age_data,
+            'avg_age': avg_age,
+            'max_age': max_age,
+            'priority_data': priority_data,
+            'region_data': region_data,
+            'group_data': group_data,
+            'total_backlog': total_backlog,
+            'backlog_trend_data': backlog_trend_data,
+            'assignee_data': assignee_data,
+            'assignee_priority_data': assignee_priority_data,
+            'jira_data': jira_data,
+            'with_jira_count': with_jira_count,
+            'no_jira_count': no_jira_count,
+            'with_jira_pct': with_jira_pct,
+            'no_jira_pct': no_jira_pct,
+            'high_priority_count': high_priority_count,
+            'aging_high_priority_count': aging_high_priority_count,
+            'risk_percentage': risk_percentage,
+            'aging_percentage': aging_percentage,
+            'high_risk_tickets': high_risk_tickets,
+            'current_backlog_count': current_backlog_count,
+            'avg_monthly_resolution': avg_monthly_resolution,
+            'months_to_clear': months_to_clear,
+            'weeks_to_clear': weeks_to_clear
+        }
+        
+        print("====== COMPLETED BACKLOG ANALYSIS ======\n\n")
+        return backlog_analysis
     
-    # Run all analyses
-    backlog_age_data, avg_age, max_age = calculate_backlog_age_distribution(df)
-    priority_data, region_data, group_data, total_backlog = calculate_backlog_composition(df)
-    backlog_trend_data = calculate_backlog_trend(df)
-    assignee_data, assignee_priority_data = calculate_assignee_backlog(df)
-    jira_data, with_jira_count, no_jira_count, with_jira_pct, no_jira_pct = calculate_jira_backlog(df)
-    high_priority_count, aging_high_priority_count, risk_percentage, aging_percentage, high_risk_tickets = calculate_risk_assessment(df)
-    current_backlog_count, avg_monthly_resolution, months_to_clear, weeks_to_clear = calculate_resolution_projection(df)
-    
-    # Compile all data into a single dictionary
-    backlog_analysis = {
-        'backlog_age_data': backlog_age_data,
-        'avg_age': avg_age,
-        'max_age': max_age,
-        'priority_data': priority_data,
-        'region_data': region_data,
-        'group_data': group_data,
-        'total_backlog': total_backlog,
-        'backlog_trend_data': backlog_trend_data,
-        'assignee_data': assignee_data,
-        'assignee_priority_data': assignee_priority_data,
-        'jira_data': jira_data,
-        'with_jira_count': with_jira_count,
-        'no_jira_count': no_jira_count,
-        'with_jira_pct': with_jira_pct,
-        'no_jira_pct': no_jira_pct,
-        'high_priority_count': high_priority_count,
-        'aging_high_priority_count': aging_high_priority_count,
-        'risk_percentage': risk_percentage,
-        'aging_percentage': aging_percentage,
-        'high_risk_tickets': high_risk_tickets,
-        'current_backlog_count': current_backlog_count,
-        'avg_monthly_resolution': avg_monthly_resolution,
-        'months_to_clear': months_to_clear,
-        'weeks_to_clear': weeks_to_clear
-    }
-    
-    return backlog_analysis 
+    except Exception as e:
+        print(f"CRITICAL ERROR in prepare_backlog_analysis: {str(e)}")
+        traceback.print_exc()
+        # Return a minimal dataset to avoid crashing the template
+        return {
+            'backlog_age_data': {'labels': ['< 7 days', '7-14 days', '14-30 days', '30-60 days', '> 60 days'], 'counts': [0, 0, 0, 0, 0]},
+            'avg_age': 0,
+            'max_age': 0,
+            'priority_data': {'labels': [], 'data': [], 'percentages': {}},
+            'region_data': {'labels': [], 'data': [], 'percentages': {}},
+            'group_data': {'labels': [], 'data': [], 'percentages': {}},
+            'total_backlog': 0,
+            'backlog_trend_data': {'labels': ['Current Month'], 'backlog_count': [0], 'new_tickets': [0], 'solved_tickets': [0], 'monthly_change': [0], 'monthly_change_pct': [0]},
+            'assignee_data': {'labels': [], 'data': []},
+            'assignee_priority_data': {},
+            'jira_data': {'labels': ['With JIRA ID', 'No JIRA ID'], 'data': [0, 0]},
+            'with_jira_count': 0,
+            'no_jira_count': 0,
+            'with_jira_pct': 0,
+            'no_jira_pct': 0,
+            'high_priority_count': 0,
+            'aging_high_priority_count': 0,
+            'risk_percentage': 0,
+            'aging_percentage': 0,
+            'high_risk_tickets': [],
+            'current_backlog_count': 0,
+            'avg_monthly_resolution': 0,
+            'months_to_clear': 0,
+            'weeks_to_clear': 0
+        } 
