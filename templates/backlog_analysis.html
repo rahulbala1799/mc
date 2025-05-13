@@ -4,60 +4,133 @@
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Backlog Analysis</h1>
 
+    <!-- Navigation Tabs -->
+    <div class="mb-4">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">
+                    <i class="bi bi-house-door header-icon"></i>Overview
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'region_analysis' %}active{% endif %}" href="{{ url_for('region_analysis') }}">
+                    <i class="bi bi-globe header-icon"></i>Region Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'group_analysis' %}active{% endif %}" href="{{ url_for('group_analysis') }}">
+                    <i class="bi bi-people header-icon"></i>Group Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'engineer_analysis' %}active{% endif %}" href="{{ url_for('engineer_analysis') }}">
+                    <i class="bi bi-person header-icon"></i>Engineer Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'priority_analysis' %}active{% endif %}" href="{{ url_for('priority_analysis') }}">
+                    <i class="bi bi-flag header-icon"></i>Priority Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'jira_id_analysis' %}active{% endif %}" href="{{ url_for('jira_id_analysis') }}">
+                    <i class="bi bi-tag header-icon"></i>JIRA ID Analysis
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">
+                    <i class="bi bi-hourglass-split header-icon"></i>Backlog Analysis
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <!-- Overview Cards -->
     <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card stat-card">
-                <div class="stat-value text-danger">{{ metrics.current_backlog }}</div>
-                <div class="stat-label">Current Backlog</div>
-                <div class="mt-2">
-                    <span class="ratio-indicator {% if metrics.backlog_trend == 'decreasing' %}ratio-good{% elif metrics.backlog_trend == 'stable' %}ratio-medium{% else %}ratio-bad{% endif %}">
-                        {{ metrics.backlog_trend|title }} trend
-                    </span>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Current Backlog</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ backlog_data.total_backlog }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-muted small">{{ 'Increasing' if backlog_data.backlog_trend_data.monthly_change[-1] > 0 else 'Decreasing' if backlog_data.backlog_trend_data.monthly_change[-1] < 0 else 'Stable' }} 
+                            {% if backlog_data.backlog_trend_data.monthly_change[-1] != 0 %}
+                            ({{ backlog_data.backlog_trend_data.monthly_change[-1]|abs }} {{ 'added' if backlog_data.backlog_trend_data.monthly_change[-1] > 0 else 'fewer' }})
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card stat-card">
-                <div class="stat-value text-info">{{ metrics.avg_backlog_age }}</div>
-                <div class="stat-label">Avg. Backlog Age (Days)</div>
-                <div class="mt-2">
-                    <span class="ratio-indicator {% if metrics.avg_backlog_age < 7 %}ratio-good{% elif metrics.avg_backlog_age < 14 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                        {{ metrics.age_trend|title }} trend
-                    </span>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Avg. Backlog Age</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ backlog_data.avg_age }} days</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-muted small">Oldest ticket: {{ backlog_data.max_age }} days</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card stat-card">
-                <div class="stat-value text-warning">{{ metrics.backlog_by_priority.high }}</div>
-                <div class="stat-label">High Priority Backlog</div>
-                <div class="mt-2">
-                    <span class="ratio-indicator {% if metrics.backlog_by_priority.high < 5 %}ratio-good{% elif metrics.backlog_by_priority.high < 10 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                        {{ metrics.priority_trend|title }} trend
-                    </span>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">High Priority Backlog</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ backlog_data.high_priority_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-muted small">{{ backlog_data.risk_percentage }}% of total backlog</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card stat-card">
-                <div class="stat-value text-success">{{ metrics.backlog_resolution_rate }}%</div>
-                <div class="stat-label">Backlog Resolution Rate</div>
-                <div class="mt-2">
-                    <span class="ratio-indicator {% if metrics.backlog_resolution_rate > 80 %}ratio-good{% elif metrics.backlog_resolution_rate > 60 %}ratio-medium{% else %}ratio-bad{% endif %}">
-                        {{ metrics.resolution_trend|title }} trend
-                    </span>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Resolution Projection</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ backlog_data.months_to_clear }} months</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-muted small">At {{ backlog_data.avg_monthly_resolution }} tickets/month</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Backlog Trend Chart -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Backlog Trend Over Time</h5>
+    <div class="row">
+        <!-- Backlog Trend Over Time -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Backlog Trend Over Time</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 300px;">
@@ -66,42 +139,12 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Backlog Distribution -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Backlog by Priority</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="height: 300px;">
-                        <canvas id="backlogPriorityChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Backlog by Region</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="height: 300px;">
-                        <canvas id="backlogRegionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Backlog Age Distribution -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Backlog Age Distribution</h5>
+        <!-- Backlog Age Distribution -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Backlog Age Distribution</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 300px;">
@@ -111,98 +154,451 @@
             </div>
         </div>
     </div>
+
+    <div class="row">
+        <!-- Backlog Composition -->
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Backlog Composition</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Priority Distribution -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow h-100">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-info">By Priority</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container" style="height: 200px;">
+                                        <canvas id="priorityDistributionChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Region Distribution -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow h-100">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-info">By Region</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container" style="height: 200px;">
+                                        <canvas id="regionDistributionChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Group Distribution -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow h-100">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-info">By Group</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container" style="height: 200px;">
+                                        <canvas id="groupDistributionChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- JIRA Analysis -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">JIRA ID Analysis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="jiraDistributionChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <p class="mb-0"><span class="font-weight-bold">With JIRA:</span> {{ backlog_data.with_jira_count }} ({{ backlog_data.with_jira_pct }}%)</p>
+                        <p><span class="font-weight-bold">Without JIRA:</span> {{ backlog_data.no_jira_count }} ({{ backlog_data.no_jira_pct }}%)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignee Analysis -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Backlog by Assignee</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="assigneeDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Assessment Section -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-danger text-white">
+                    <h6 class="m-0 font-weight-bold">Risk Assessment - High Priority Aging Tickets</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-md-3 text-center">
+                            <div class="h4 mb-0 font-weight-bold text-danger">{{ backlog_data.aging_high_priority_count }}</div>
+                            <div class="text-xs text-muted">High Priority Tickets > 7 Days Old</div>
+                            <div class="mt-2 text-muted">({{ backlog_data.aging_percentage }}% of high priority tickets)</div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Ticket ID</th>
+                                            <th>Priority</th>
+                                            <th>Age (Days)</th>
+                                            <th>Region</th>
+                                            <th>Assignee</th>
+                                            <th>Group</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ticket in backlog_data.high_risk_tickets %}
+                                        <tr>
+                                            <td>{{ ticket.ticket_id }}</td>
+                                            <td>{{ ticket.priority }}</td>
+                                            <td class="text-danger font-weight-bold">{{ ticket.age_days }}</td>
+                                            <td>{{ ticket.region }}</td>
+                                            <td>{{ ticket.assignee }}</td>
+                                            <td>{{ ticket.group }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Utility function to safely parse JSON data
+    function safeJsonParse(jsonString, defaultValue) {
+        try {
+            return JSON.parse(jsonString);
+        } catch (e) {
+            console.error("Error parsing JSON:", e);
+            return defaultValue;
+        }
+    }
+
+    // Chart colors
+    const chartColors = {
+        red: 'rgba(220, 53, 69, 0.8)',
+        orange: 'rgba(253, 126, 20, 0.8)',
+        yellow: 'rgba(255, 193, 7, 0.8)',
+        green: 'rgba(40, 167, 69, 0.8)',
+        blue: 'rgba(0, 123, 255, 0.8)',
+        indigo: 'rgba(102, 16, 242, 0.8)',
+        purple: 'rgba(111, 66, 193, 0.8)',
+        pink: 'rgba(232, 62, 140, 0.8)',
+        teal: 'rgba(32, 201, 151, 0.8)',
+        cyan: 'rgba(23, 162, 184, 0.8)',
+        gray: 'rgba(108, 117, 125, 0.8)'
+    };
+
     // Backlog Trend Chart
     const trendCtx = document.getElementById('backlogTrendChart').getContext('2d');
+    const trendLabels = safeJsonParse('{{ backlog_data.backlog_trend_data.labels|tojson }}', []);
+    const trendData = safeJsonParse('{{ backlog_data.backlog_trend_data.backlog_count|tojson }}', []);
+    const newTickets = safeJsonParse('{{ backlog_data.backlog_trend_data.new_tickets|tojson }}', []);
+    const solvedTickets = safeJsonParse('{{ backlog_data.backlog_trend_data.solved_tickets|tojson }}', []);
+
     new Chart(trendCtx, {
         type: 'line',
         data: {
-            labels: {{ backlog_trend.labels|tojson }},
-            datasets: [{
-                label: 'Backlog Count',
-                data: {{ backlog_trend.data|tojson }},
-                borderColor: 'rgba(220, 53, 69, 0.8)',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                fill: true,
-                tension: 0.3
-            }]
+            labels: trendLabels,
+            datasets: [
+                {
+                    label: 'Backlog',
+                    data: trendData,
+                    borderColor: chartColors.red,
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'New Tickets',
+                    data: newTickets,
+                    borderColor: chartColors.blue,
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: false
+                },
+                {
+                    label: 'Solved Tickets',
+                    data: solvedTickets,
+                    borderColor: chartColors.green,
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderWidth: 2,
+                    fill: false
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Backlog Trend',
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Tickets'
+                    }
                 }
             }
         }
     });
 
-    // Backlog Priority Chart
-    const priorityCtx = document.getElementById('backlogPriorityChart').getContext('2d');
-    new Chart(priorityCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ backlog_priority.labels|tojson }},
-            datasets: [{
-                data: {{ backlog_priority.data|tojson }},
-                backgroundColor: [
-                    'rgba(220, 53, 69, 0.7)',
-                    'rgba(255, 193, 7, 0.7)',
-                    'rgba(25, 135, 84, 0.7)',
-                    'rgba(13, 202, 240, 0.7)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Backlog Region Chart
-    const regionCtx = document.getElementById('backlogRegionChart').getContext('2d');
-    new Chart(regionCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ backlog_region.labels|tojson }},
-            datasets: [{
-                data: {{ backlog_region.data|tojson }},
-                backgroundColor: [
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(102, 16, 242, 0.7)',
-                    'rgba(253, 126, 20, 0.7)',
-                    'rgba(32, 201, 151, 0.7)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
     // Backlog Age Chart
     const ageCtx = document.getElementById('backlogAgeChart').getContext('2d');
+    const ageLabels = safeJsonParse('{{ backlog_data.backlog_age_data.labels|tojson }}', []);
+    const ageCounts = safeJsonParse('{{ backlog_data.backlog_age_data.counts|tojson }}', []);
+
     new Chart(ageCtx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-            labels: {{ backlog_age.labels|tojson }},
+            labels: ageLabels,
             datasets: [{
-                label: 'Number of Tickets',
-                data: {{ backlog_age.data|tojson }},
-                backgroundColor: 'rgba(13, 110, 253, 0.7)'
+                data: ageCounts,
+                backgroundColor: [
+                    chartColors.green,
+                    chartColors.blue,
+                    chartColors.yellow,
+                    chartColors.orange,
+                    chartColors.red
+                ],
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Priority Distribution Chart
+    const priorityCtx = document.getElementById('priorityDistributionChart').getContext('2d');
+    const priorityLabels = safeJsonParse('{{ backlog_data.priority_data.labels|tojson }}', []);
+    const priorityData = safeJsonParse('{{ backlog_data.priority_data.data|tojson }}', []);
+
+    new Chart(priorityCtx, {
+        type: 'pie',
+        data: {
+            labels: priorityLabels,
+            datasets: [{
+                data: priorityData,
+                backgroundColor: [
+                    chartColors.red,
+                    chartColors.yellow,
+                    chartColors.green,
+                    chartColors.blue,
+                    chartColors.purple,
+                    chartColors.orange
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+
+    // Region Distribution Chart
+    const regionCtx = document.getElementById('regionDistributionChart').getContext('2d');
+    const regionLabels = safeJsonParse('{{ backlog_data.region_data.labels|tojson }}', []);
+    const regionData = safeJsonParse('{{ backlog_data.region_data.data|tojson }}', []);
+
+    new Chart(regionCtx, {
+        type: 'pie',
+        data: {
+            labels: regionLabels,
+            datasets: [{
+                data: regionData,
+                backgroundColor: [
+                    chartColors.blue,
+                    chartColors.indigo,
+                    chartColors.purple,
+                    chartColors.pink,
+                    chartColors.red,
+                    chartColors.orange
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+
+    // Group Distribution Chart
+    const groupCtx = document.getElementById('groupDistributionChart').getContext('2d');
+    const groupLabels = safeJsonParse('{{ backlog_data.group_data.labels|tojson }}', []);
+    const groupData = safeJsonParse('{{ backlog_data.group_data.data|tojson }}', []);
+
+    new Chart(groupCtx, {
+        type: 'pie',
+        data: {
+            labels: groupLabels,
+            datasets: [{
+                data: groupData,
+                backgroundColor: [
+                    chartColors.teal,
+                    chartColors.cyan,
+                    chartColors.blue,
+                    chartColors.indigo,
+                    chartColors.purple,
+                    chartColors.pink,
+                    chartColors.red
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+
+    // JIRA Distribution Chart
+    const jiraCtx = document.getElementById('jiraDistributionChart').getContext('2d');
+    const jiraLabels = safeJsonParse('{{ backlog_data.jira_data.labels|tojson }}', ['With JIRA ID', 'No JIRA ID']);
+    const jiraData = safeJsonParse('{{ backlog_data.jira_data.data|tojson }}', [0, 0]);
+
+    new Chart(jiraCtx, {
+        type: 'doughnut',
+        data: {
+            labels: jiraLabels,
+            datasets: [{
+                data: jiraData,
+                backgroundColor: [
+                    chartColors.green,
+                    chartColors.red
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+
+    // Assignee Distribution Chart
+    const assigneeCtx = document.getElementById('assigneeDistributionChart').getContext('2d');
+    const assigneeLabels = safeJsonParse('{{ backlog_data.assignee_data.labels|tojson }}', []);
+    const assigneeData = safeJsonParse('{{ backlog_data.assignee_data.data|tojson }}', []);
+
+    new Chart(assigneeCtx, {
+        type: 'bar',
+        data: {
+            labels: assigneeLabels,
+            datasets: [{
+                label: 'Backlog Tickets',
+                data: assigneeData,
+                backgroundColor: chartColors.blue,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
             scales: {
-                y: {
-                    beginAtZero: true
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Tickets'
+                    }
                 }
             }
         }

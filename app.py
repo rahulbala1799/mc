@@ -7,6 +7,7 @@ from datetime import datetime
 import io
 import tempfile
 import traceback
+import backlog_utils  # Import the new backlog utilities module
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-12345')
@@ -1971,51 +1972,13 @@ def backlog_analysis():
         df = pd.read_excel(filepath)
         df = process_ticket_data(df)
         
-        # Dummy metrics for now
-        metrics = {
-            'current_backlog': 45,
-            'backlog_trend': 'decreasing',
-            'avg_backlog_age': 5.2,
-            'age_trend': 'stable',
-            'backlog_by_priority': {
-                'high': 8,
-                'medium': 15,
-                'low': 22
-            },
-            'priority_trend': 'decreasing',
-            'backlog_resolution_rate': 75,
-            'resolution_trend': 'increasing'
-        }
-        
-        # Dummy chart data
-        backlog_trend = {
-            'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            'data': [60, 55, 50, 48, 45, 45]
-        }
-        
-        backlog_priority = {
-            'labels': ['High', 'Medium', 'Low'],
-            'data': [8, 15, 22]
-        }
-        
-        backlog_region = {
-            'labels': ['North', 'South', 'East', 'West'],
-            'data': [12, 15, 8, 10]
-        }
-        
-        backlog_age = {
-            'labels': ['< 7 days', '7-14 days', '14-30 days', '> 30 days'],
-            'data': [20, 15, 7, 3]
-        }
+        # Use the dedicated module to prepare all backlog analysis data
+        backlog_data = backlog_utils.prepare_backlog_analysis(df)
         
         return render_template(
             'backlog_analysis.html',
             filename=filename,
-            metrics=metrics,
-            backlog_trend=backlog_trend,
-            backlog_priority=backlog_priority,
-            backlog_region=backlog_region,
-            backlog_age=backlog_age
+            backlog_data=backlog_data
         )
         
     except Exception as e:
