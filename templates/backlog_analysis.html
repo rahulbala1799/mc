@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Backlog Analysis</h1>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="stat-value text-danger">{{ metrics.current_backlog }}</div>
+                <div class="stat-label">Current Backlog</div>
+                <div class="mt-2">
+                    <span class="ratio-indicator {% if metrics.backlog_trend == 'decreasing' %}ratio-good{% elif metrics.backlog_trend == 'stable' %}ratio-medium{% else %}ratio-bad{% endif %}">
+                        {{ metrics.backlog_trend|title }} trend
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="stat-value text-info">{{ metrics.avg_backlog_age }}</div>
+                <div class="stat-label">Avg. Backlog Age (Days)</div>
+                <div class="mt-2">
+                    <span class="ratio-indicator {% if metrics.avg_backlog_age < 7 %}ratio-good{% elif metrics.avg_backlog_age < 14 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                        {{ metrics.age_trend|title }} trend
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="stat-value text-warning">{{ metrics.backlog_by_priority.high }}</div>
+                <div class="stat-label">High Priority Backlog</div>
+                <div class="mt-2">
+                    <span class="ratio-indicator {% if metrics.backlog_by_priority.high < 5 %}ratio-good{% elif metrics.backlog_by_priority.high < 10 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                        {{ metrics.priority_trend|title }} trend
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="stat-value text-success">{{ metrics.backlog_resolution_rate }}%</div>
+                <div class="stat-label">Backlog Resolution Rate</div>
+                <div class="mt-2">
+                    <span class="ratio-indicator {% if metrics.backlog_resolution_rate > 80 %}ratio-good{% elif metrics.backlog_resolution_rate > 60 %}ratio-medium{% else %}ratio-bad{% endif %}">
+                        {{ metrics.resolution_trend|title }} trend
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backlog Trend Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Backlog Trend Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="backlogTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backlog Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Backlog by Priority</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="backlogPriorityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Backlog by Region</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="backlogRegionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backlog Age Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Backlog Age Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="backlogAgeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Backlog Trend Chart
+    const trendCtx = document.getElementById('backlogTrendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: {{ backlog_trend.labels|tojson }},
+            datasets: [{
+                label: 'Backlog Count',
+                data: {{ backlog_trend.data|tojson }},
+                borderColor: 'rgba(220, 53, 69, 0.8)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Backlog Priority Chart
+    const priorityCtx = document.getElementById('backlogPriorityChart').getContext('2d');
+    new Chart(priorityCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ backlog_priority.labels|tojson }},
+            datasets: [{
+                data: {{ backlog_priority.data|tojson }},
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(13, 202, 240, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Backlog Region Chart
+    const regionCtx = document.getElementById('backlogRegionChart').getContext('2d');
+    new Chart(regionCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ backlog_region.labels|tojson }},
+            datasets: [{
+                data: {{ backlog_region.data|tojson }},
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(102, 16, 242, 0.7)',
+                    'rgba(253, 126, 20, 0.7)',
+                    'rgba(32, 201, 151, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Backlog Age Chart
+    const ageCtx = document.getElementById('backlogAgeChart').getContext('2d');
+    new Chart(ageCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ backlog_age.labels|tojson }},
+            datasets: [{
+                label: 'Number of Tickets',
+                data: {{ backlog_age.data|tojson }},
+                backgroundColor: 'rgba(13, 110, 253, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

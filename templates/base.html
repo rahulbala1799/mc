@@ -1,0 +1,10 @@
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'ticket_overview' %}active{% endif %}" href="{{ url_for('ticket_overview') }}">
+                            <i class="fas fa-ticket-alt me-2"></i>Ticket Overview
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'backlog_analysis' %}active{% endif %}" href="{{ url_for('backlog_analysis') }}">
+                            <i class="fas fa-chart-line me-2"></i>Backlog Analysis
+                        </a>
+                    </li> 
