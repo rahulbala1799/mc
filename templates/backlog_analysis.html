@@ -4,7 +4,17 @@
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Backlog Analysis</h1>
 
-    <!-- Debug Information (will only show if there's a problem) -->
+    <!-- Debug Information -->
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Debug Information</h4>
+        <p>Backlog Data Keys: {{ backlog_data.keys()|join(", ") }}</p>
+        <p>Total Backlog: {{ backlog_data.total_backlog }}</p>
+        <p>Age Data: {{ backlog_data.backlog_age_data }}</p>
+        <hr>
+        <p class="mb-0">If you see this message, the template is loading but data may be missing.</p>
+    </div>
+
+    <!-- Original Debug Information (will only show if there's a problem) -->
     {% if backlog_data.total_backlog is defined and backlog_data.total_backlog == 0 %}
     <div class="alert alert-warning" role="alert">
         <h4 class="alert-heading">Debug Information</h4>
