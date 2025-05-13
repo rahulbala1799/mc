@@ -334,6 +334,11 @@ def calculate_risk_assessment(df):
         # Get current backlog
         current_backlog = df[df['Ticket solved - Date'].isna()].copy()  # Use copy to avoid SettingWithCopyWarning
         
+        # Ensure Ticket IDs are properly handled
+        if current_backlog['Ticket ID'].isnull().sum() > 0:
+            for idx in current_backlog.index[current_backlog['Ticket ID'].isnull()]:
+                current_backlog.loc[idx, 'Ticket ID'] = f'UNKNOWN-{idx}'
+        
         # Calculate age of tickets in days
         current_date = pd.Timestamp.today()
         current_backlog['age_days'] = (current_date - pd.to_datetime(current_backlog['Logged - Date'])).dt.days
@@ -435,6 +440,16 @@ def prepare_backlog_analysis(df):
     print("\n\n====== STARTING BACKLOG ANALYSIS ======")
     print(f"DataFrame shape: {df.shape}, columns: {df.columns.tolist()}")
     try:
+        # Handle missing Ticket IDs first to prevent issues later
+        missing_ids = df['Ticket ID'].isnull().sum()
+        if missing_ids > 0:
+            print(f"Found {missing_ids} missing Ticket IDs - filling with UNKNOWN-index")
+            # Fix: Use loop-based approach instead of problematic fillna with index
+            df_copy = df.copy()  # Create a copy to avoid SettingWithCopyWarning
+            for idx in df_copy.index[df_copy['Ticket ID'].isnull()]:
+                df_copy.loc[idx, 'Ticket ID'] = f'UNKNOWN-{idx}'
+            df = df_copy
+        
         # Ensure data is processed
         if 'Resolution Time (Days)' not in df.columns:
             # Calculate resolution time in days

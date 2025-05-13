@@ -274,7 +274,9 @@ def ticket_overview():
             missing_ids = df['Ticket ID'].isnull().sum()
             if missing_ids > 0:
                 print(f"WARNING: Found {missing_ids} records with missing Ticket IDs - continuing with analysis")
-                df['Ticket ID'] = df['Ticket ID'].fillna('UNKNOWN-' + df.index.astype(str))
+                # Fix: for each index create a string instead of trying to add with the whole index series
+                for idx in df.index[df['Ticket ID'].isnull()]:
+                    df.loc[idx, 'Ticket ID'] = f'UNKNOWN-{idx}'
             # Get unique months in sorted order
             unique_months = df_sorted['Month'].dropna().unique().tolist()
             print(f"DEBUG: unique_months = {unique_months}")
@@ -1992,10 +1994,24 @@ def backlog_analysis():
         for col in required_columns:
             print(f"  - {col}: {'PRESENT' if col in df.columns else 'MISSING'}")
         
+        # Fix missing Ticket IDs before calling backlog utils
+        missing_ids = df['Ticket ID'].isnull().sum()
+        if missing_ids > 0:
+            print(f"Pre-processing: Fixing {missing_ids} missing Ticket IDs...")
+            # Safe approach with individual assignments instead of fillna operation
+            for idx in df.index[df['Ticket ID'].isnull()]:
+                df.loc[idx, 'Ticket ID'] = f'UNKNOWN-{idx}'
+        
         # Use the dedicated module to prepare all backlog analysis data
-        print("Calling backlog_utils.prepare_backlog_analysis()...")
-        backlog_data = backlog_utils.prepare_backlog_analysis(df)
-        print("backlog_data prepared successfully")
+        try:
+            print("Calling backlog_utils.prepare_backlog_analysis()...")
+            backlog_data = backlog_utils.prepare_backlog_analysis(df)
+            print("backlog_data prepared successfully")
+        except TypeError as type_error:
+            print(f"TypeError in prepare_backlog_analysis: {str(type_error)}")
+            traceback.print_exc()
+            # Re-raise to be caught by the outer exception handler
+            raise
         
         # Make sure all lists are properly formatted for the template
         import json

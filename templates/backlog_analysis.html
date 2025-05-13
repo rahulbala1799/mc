@@ -4,6 +4,20 @@
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Backlog Analysis</h1>
 
+    <!-- Debug Information (will only show if there's a problem) -->
+    {% if backlog_data.total_backlog is defined and backlog_data.total_backlog == 0 %}
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">Debug Information</h4>
+        <p>The backlog analysis shows zero backlog. This could mean:</p>
+        <ol>
+            <li>There are genuinely no backlog tickets in the data</li>
+            <li>There might be issues with the data processing</li>
+        </ol>
+        <hr>
+        <p class="mb-0">Check if all tickets have 'Ticket solved - Date' values or if there are missing required columns.</p>
+    </div>
+    {% endif %}
+
     <!-- Navigation Tabs -->
     <div class="mb-4">
         <ul class="nav nav-tabs">
